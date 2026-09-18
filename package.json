@@ -1,0 +1,29 @@
+{
+  "name": "dabbaview-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "DabbaView Web - browser-based DICOM viewer (Cornerstone3D + React + Vite)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "@azure/msal-browser": "^5.22.0",
+    "@cornerstonejs/core": "^3.33.5",
+    "@cornerstonejs/dicom-image-loader": "^3.33.5",
+    "@cornerstonejs/tools": "^3.33.5",
+    "dicom-parser": "^1.8.21",
+    "gifenc": "^1.0.3",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@originjs/vite-plugin-commonjs": "^1.0.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "vite": "^7.3.6"
+  }
+}

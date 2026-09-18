@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Microsoft Authentication</title>
+  </head>
+  <body style="background:#0b0d10;color:#aaa;font-family:sans-serif">
+    로그인 처리 중…
+    <script type="module">
+      import { broadcastResponseToMainFrame } from '@azure/msal-browser/redirect-bridge';
+      broadcastResponseToMainFrame().catch((e) => {
+        document.body.textContent = '로그인 오류: ' + (e && e.message);
+      });
+    </script>
+  </body>
+</html>
