@@ -75,7 +75,7 @@ export default function App() {
   const onGoogleDrive = async () => {
     const { setLoading, showToast, setDialog } = useStore.getState();
     if (!isGoogleConfigured()) {
-      showToast('Google Drive를 쓰려면 먼저 Client ID와 API Key를 설정하세요', 'error');
+      showToast('Google Drive API 키를 입력해주세요 (⚙ 설정)', 'error');
       setDialog('settings');
       return;
     }
@@ -91,7 +91,7 @@ export default function App() {
   const onOneDrive = () => {
     const { setDialog, showToast } = useStore.getState();
     if (!isOneDriveConfigured()) {
-      showToast('OneDrive를 쓰려면 먼저 Microsoft Client ID를 설정하세요', 'error');
+      showToast('OneDrive API 키(Client ID)를 입력해주세요 (⚙ 설정)', 'error');
       setDialog('settings');
       return;
     }

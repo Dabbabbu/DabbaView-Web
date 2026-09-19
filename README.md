@@ -62,8 +62,7 @@ npm run dev          # http://localhost:5173
 ### GitHub Pages (정적 사이트)
 `main` 브랜치에 push하면 `.github/workflows/deploy.yml`이 빌드해서 Pages에 올립니다.
 1. 저장소 **Settings → Pages → Source: GitHub Actions**
-2. (선택) 클라우드 연동 키를 **Settings → Secrets and variables → Actions → Variables**에 `VITE_GOOGLE_CLIENT_ID` 등으로 등록
-3. 주소: `https://<사용자>.github.io/DabbaView-Web/`
+2. 주소: `https://<사용자>.github.io/DabbaView-Web/`
 
 빌드는 상대 경로(`base: './'`)라서 어떤 하위 경로에 올려도 동작합니다.
 
@@ -76,18 +75,17 @@ npm start            # http://localhost:8080  (PORT=3000 npm start 로 포트 �
 
 ## 클라우드 연동 설정
 
-키는 `.env`(빌드 시 기본값), GitHub 저장소 Variables(Pages 빌드), 또는 앱의 **⚙ 설정** 창(이 브라우저의 localStorage에 저장)에 넣습니다. 키가 없을 때 Google Drive/OneDrive 버튼을 누르면 설정 창이 열리고, 각 서비스 옆에 `설정됨/미설정`이 표시됩니다.
+앱에는 API 키가 **들어 있지 않습니다.** 각 사용자가 본인의 키를 발급받아 앱의 **⚙ 설정** 창에 입력합니다. 입력한 값은 그 브라우저의 localStorage에만 저장되고 서버로 전송되지 않습니다.
 
-```bash
-cp .env.example .env   # 값 입력 후 npm run dev / npm run build
-```
+- 키가 없으면 설정 창에 "API 키를 입력해주세요"가 표시되고, 각 서비스 옆에 `설정됨/미설정`이 나옵니다.
+- 키 없이 Google Drive/OneDrive 버튼을 누르면 설정 창으로 안내합니다.
 
 ### Google Drive
 1. [Google Cloud Console](https://console.cloud.google.com/)에서 프로젝트 생성 → **Google Drive API**, **Google Picker API** 사용 설정
 2. **OAuth 동의 화면** 구성 (테스트 단계면 본인 계정을 테스트 사용자로 추가)
-3. **사용자 인증 정보 → OAuth 클라이언트 ID (웹 애플리케이션)**: 승인된 JavaScript 원본에 `http://localhost:5173`, `https://<사용자>.github.io` 등 추가 → `VITE_GOOGLE_CLIENT_ID`
-4. **API 키** 생성 (Picker API로 제한 권장) → `VITE_GOOGLE_API_KEY`
-5. 프로젝트 번호 → `VITE_GOOGLE_APP_ID`
+3. **사용자 인증 정보 → OAuth 클라이언트 ID (웹 애플리케이션)**: 승인된 JavaScript 원본에 `http://localhost:5173`, `https://<사용자>.github.io` 등 추가 → 설정 창의 **OAuth Client ID**
+4. **API 키** 생성 (Picker API로 제한 권장) → 설정 창의 **API Key**
+5. (선택) 프로젝트 번호 → 설정 창의 **App ID**
 
 기본 범위는 `drive.readonly`입니다 (폴더를 골라 하위 파일까지 읽기 위해 필요). 공개 서비스로 운영하려면 Google 앱 검증이 필요합니다.
 
@@ -98,7 +96,7 @@ cp .env.example .env   # 값 입력 후 npm run dev / npm run build
    - `http://localhost:5173/auth-redirect.html`
    - `https://<사용자>.github.io/DabbaView-Web/auth-redirect.html`
 3. **API permissions**: Microsoft Graph 위임 권한 `Files.Read`, `Files.Read.All`, `User.Read`
-4. Application (client) ID → `VITE_MS_CLIENT_ID`
+4. Application (client) ID → 설정 창의 **Application (client) ID**
 
 MSAL v5는 팝업 응답을 `auth-redirect.html`(redirect bridge)이 메인 창으로 넘겨줍니다.
 

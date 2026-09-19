@@ -24,13 +24,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # 클라우드 API 키는 빌드에 넣지 않는다 (각 사용자가 앱의 설정 창에서 입력)
       - run: npm run build
-        env:
-          # 저장소 Settings → Secrets and variables → Actions → Variables 에 등록 (선택)
-          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
-          VITE_GOOGLE_API_KEY: ${{ vars.VITE_GOOGLE_API_KEY }}
-          VITE_GOOGLE_APP_ID: ${{ vars.VITE_GOOGLE_APP_ID }}
-          VITE_MS_CLIENT_ID: ${{ vars.VITE_MS_CLIENT_ID }}
       - run: touch dist/.nojekyll
       - name: Version
         run: echo "Building DabbaView Web v$(node -p "require('./package.json').version")" >> "$GITHUB_STEP_SUMMARY"

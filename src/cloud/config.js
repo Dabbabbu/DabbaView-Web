@@ -1,13 +1,14 @@
-// 클라우드 연동 설정: .env(VITE_*) 기본값 + 앱 설정창(localStorage)에서 덮어쓰기
+// 클라우드 연동 설정: 앱에 내장된 키는 없고, 각 사용자가 ⚙ 설정 창에서 직접 입력한다.
+// 입력한 값은 그 사용자의 브라우저(localStorage)에만 저장된다.
 const KEY = 'dabbaview.cloud';
 
 const defaults = {
-  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
-  googleApiKey: import.meta.env.VITE_GOOGLE_API_KEY || '',
-  googleAppId: import.meta.env.VITE_GOOGLE_APP_ID || '',
+  googleClientId: '',
+  googleApiKey: '',
+  googleAppId: '',
   googleScope: 'https://www.googleapis.com/auth/drive.readonly',
-  msClientId: import.meta.env.VITE_MS_CLIENT_ID || '',
-  msAuthority: import.meta.env.VITE_MS_AUTHORITY || 'https://login.microsoftonline.com/common',
+  msClientId: '',
+  msAuthority: 'https://login.microsoftonline.com/common',
 };
 
 export function getCloudConfig() {
