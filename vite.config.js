@@ -1,11 +1,19 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { viteCommonjs } from '@originjs/vite-plugin-commonjs';
 
-// base: GitHub Pages 배포 시 `npm run build:pages` (=/DabbaView-Web/) 사용
+// 버전은 package.json 하나만 기준으로 삼고, 빌드 시 코드에 상수로 주입한다
+const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf-8'));
+
+// base: 상대 경로라서 GitHub Pages 하위 경로(/DabbaView-Web/)에서도 그대로 동작
 export default defineConfig({
   base: process.env.VITE_BASE || './',
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_DATE__: JSON.stringify(new Date().toLocaleDateString('sv-SE')), // YYYY-MM-DD (로컬 시간)
+  },
   plugins: [react(), viteCommonjs()],
   optimizeDeps: {
     exclude: ['@cornerstonejs/dicom-image-loader'],

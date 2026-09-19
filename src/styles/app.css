@@ -908,6 +908,50 @@ code {
   white-space: nowrap;
 }
 
+/* ─────────── 버전 표기 ─────────── */
+.brand {
+  cursor: pointer;
+}
+.app-version {
+  flex: none;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 6px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.app-version:hover {
+  color: var(--text);
+}
+.app-version-static {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 6px;
+}
+.about {
+  text-align: center;
+}
+.about h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+.about h1 em {
+  font-style: normal;
+  color: var(--accent);
+  font-weight: 500;
+}
+.about-version {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.about a {
+  color: var(--accent);
+}
+
 .only-mobile,
 .only-sm {
   display: none;

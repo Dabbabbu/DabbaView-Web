@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { formatDate } from '../dicom/meta';
 import { Icon } from './Icons';
+import { APP_TITLE } from '../version';
 
 /** INFINITT 스타일 시리즈 패널: 검사별 묶음 + 썸네일 + 시리즈번호/장수 + 시퀀스명 */
 export default function SeriesPanel() {
@@ -90,6 +91,9 @@ export default function SeriesPanel() {
           </div>
         ))}
       </div>
+      <button className="app-version" title="정보" onClick={() => useStore.getState().setDialog('about')}>
+        {APP_TITLE}
+      </button>
     </aside>
   );
 }

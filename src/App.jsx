@@ -28,6 +28,8 @@ import AnonymizeDialog from './components/AnonymizeDialog';
 import SettingsDialog from './components/SettingsDialog';
 import OneDriveBrowser from './components/OneDriveBrowser';
 import HelpDialog from './components/HelpDialog';
+import AboutDialog from './components/AboutDialog';
+import { APP_TITLE } from './version';
 import { Icon } from './components/Icons';
 
 export default function App() {
@@ -238,6 +240,7 @@ export default function App() {
       {dialog === 'settings' && <SettingsDialog onClose={closeDialog} />}
       {dialog === 'onedrive' && <OneDriveBrowser onClose={closeDialog} />}
       {dialog === 'help' && <HelpDialog onClose={closeDialog} />}
+      {dialog === 'about' && <AboutDialog onClose={closeDialog} />}
     </div>
   );
 }
@@ -265,6 +268,7 @@ function Welcome({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive }) {
             <Icon name="onedrive" /> OneDrive
           </button>
         </div>
+        <p className="app-version-static">{APP_TITLE}</p>
         <p className="muted small">모든 영상 처리는 브라우저 안에서만 이루어지며 서버로 업로드되지 않습니다. 진단용 의료기기가 아닙니다.</p>
       </div>
     </div>

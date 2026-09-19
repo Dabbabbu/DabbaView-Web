@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore, getSeries } from '../store/useStore';
 import { Icon } from './Icons';
+import { APP_TITLE, APP_VERSION } from '../version';
 import {
   WINDOW_PRESETS,
   applyWindow,
@@ -51,7 +52,7 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive
       <button className="icon-btn" title="시리즈 패널 (F2)" onClick={() => st().toggleSeriesPanel()}>
         <Icon name="panel" />
       </button>
-      <div className="brand">
+      <div className="brand" title={APP_TITLE} onClick={() => st().setDialog('about')}>
         <span className="brand-mark" />
         <span className="brand-name">
           DabbaView <em>Web</em>
@@ -120,6 +121,9 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive
         <button className="icon-btn" title="도움말 (?)" onClick={() => st().setDialog('help')}>
           <Icon name="help" />
         </button>
+        <button className="icon-btn" title="정보" onClick={() => st().setDialog('about')}>
+          <Icon name="info" />
+        </button>
       </div>
       <div className="dropdown only-sm">
         <button className="icon-btn" onClick={() => setMenu(menu === 'more' ? null : 'more')} title="더보기">
@@ -147,6 +151,9 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive
             </button>
             <button onClick={() => st().setDialog('help')}>
               <Icon name="help" /> 도움말
+            </button>
+            <button onClick={() => st().setDialog('about')}>
+              <Icon name="info" /> 정보 <span className="muted">v{APP_VERSION}</span>
             </button>
           </div>
         )}

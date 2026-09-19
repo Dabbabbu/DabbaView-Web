@@ -122,6 +122,14 @@ MSAL v5는 팝업 응답을 `auth-redirect.html`(redirect bridge)이 메인 창�
 | W P Z S / L A B E D | W/L, Pan, Zoom, Scroll / 거리, 각도, 사각형, 타원, 자유곡선 |
 | O, T, F2, Tab, ? | 오버레이, 태그, 시리즈 패널, 다음 칸, 도움말 |
 
+## 버전
+
+버전은 `package.json`의 `version` 하나만 기준으로 삼습니다. 빌드할 때 `vite.config.js`가 이 값을 `__APP_VERSION__`으로 코드에 넣고(`src/version.js`), 화면에는 **시리즈 패널 아래**, **시작 화면**, **ⓘ 정보 창**에 `DabbaView Web v1.0.0` 형태로 표시됩니다.
+
+```bash
+npm version 1.1.0 --no-git-tag-version   # package.json만 바꾸면 다음 빌드부터 화면에 반영
+```
+
 ## 프로젝트 구조
 
 ```
