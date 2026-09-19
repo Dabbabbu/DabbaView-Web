@@ -662,14 +662,27 @@ code {
   transform: translateX(-50%);
   z-index: 90;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px 14px;
   background: var(--bg-3);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   max-width: calc(100vw - 20px);
+}
+.loading-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.loading-detail {
+  font-size: 12px;
+}
+.btn.sm {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 .progress {
   width: 160px;

@@ -61,7 +61,7 @@ function walkEntry(entry, out) {
   });
 }
 
-function isObviouslyNotDicom(name = '') {
+export function isObviouslyNotDicom(name = '') {
   const base = name.split('/').pop();
   if (base.startsWith('.')) return true;
   if (/^DICOMDIR$/i.test(base)) return true;

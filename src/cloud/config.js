@@ -45,18 +45,3 @@ export function loadScript(src) {
     document.head.appendChild(s);
   });
 }
-
-/** 동시 다운로드 제한 */
-export async function mapLimit(items, limit, fn) {
-  const results = new Array(items.length);
-  let i = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, async () => {
-      while (i < items.length) {
-        const idx = i++;
-        results[idx] = await fn(items[idx], idx);
-      }
-    }),
-  );
-  return results;
-}

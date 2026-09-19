@@ -12,7 +12,7 @@ const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: 
 export const useStore = create((set, get) => ({
   // 데이터
   series: [], // loader.groupIntoSeries 결과
-  loading: null, // { label, done, total }
+  loading: null, // { label, done, total, detail?, onCancel? }
   toast: null,
 
   // 화면

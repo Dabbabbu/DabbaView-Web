@@ -4,6 +4,7 @@ import { getGraphToken, listChildren, downloadOneDriveItems, signOutOneDrive, is
 import { useStore } from '../store/useStore';
 import { ingestFiles } from '../dicom/ingest';
 import { Icon } from './Icons';
+import { isAbort } from '../cloud/transfer';
 
 /** Microsoft Graph로 OneDrive를 탐색해 파일/폴더를 고르는 창 */
 export default function OneDriveBrowser({ onClose }) {
@@ -61,17 +62,23 @@ export default function OneDriveBrowser({ onClose }) {
   };
 
   const load = async (list) => {
-    const { setLoading } = useStore.getState();
+    const { setLoading, showToast } = useStore.getState();
     onClose();
+    const ac = new AbortController();
+    const onCancel = () => ac.abort();
     try {
-      const files = await downloadOneDriveItems(token, list, (done, total, label) => setLoading({ label, done, total }));
+      const files = await downloadOneDriveItems(token, list, (status) => setLoading({ ...status, onCancel }), ac.signal);
       setLoading(null);
       await ingestFiles(files, 'OneDrive');
     } catch (e) {
       setLoading(null);
-      useStore.getState().showToast(`OneDrive 오류: ${e.message}`, 'error');
+      if (isAbort(e) || ac.signal.aborted) showToast('OneDrive 불러오기를 취소했습니다');
+      else showToast(`OneDrive 오류: ${e.message}`, 'error');
     }
   };
+
+  const selFolders = [...selected.values()].filter(isFolder).length;
+  const selFiles = selected.size - selFolders;
 
   return (
     <Modal
@@ -88,12 +95,13 @@ export default function OneDriveBrowser({ onClose }) {
             이 폴더 전체 열기
           </button>
           <button className="btn primary" disabled={!selected.size} onClick={() => load([...selected.values()])}>
-            선택 항목 열기 ({selected.size})
+            {selected.size ? `선택 열기 (${[selFolders && `폴더 ${selFolders}`, selFiles && `파일 ${selFiles}`].filter(Boolean).join(', ')})` : '선택 열기'}
           </button>
         </>
       }
     >
       {error && <p className="warn">{error}</p>}
+      <p className="muted small">폴더를 선택하거나 "이 폴더 전체 열기"를 누르면 하위 폴더의 DICOM(ZIP 포함)을 모두 받아서 엽니다.</p>
       <div className="crumbs">
         {path.map((p, i) => (
           <button key={i} className="crumb" onClick={() => setPath(path.slice(0, i + 1))}>

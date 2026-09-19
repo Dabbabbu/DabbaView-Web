@@ -1,6 +1,8 @@
-import { getCloudConfig, isGoogleConfigured, loadScript, mapLimit } from './config';
+import { getCloudConfig, isGoogleConfigured, loadScript } from './config';
+import { crawl, downloadAll, crawlStatus, downloadStatus } from './transfer';
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
+const SHORTCUT_MIME = 'application/vnd.google-apps.shortcut';
 let accessToken = null;
 let tokenExpiry = 0;
 
@@ -33,13 +35,16 @@ function showPicker(cfg, token) {
     const docs = new gp.DocsView(gp.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(true).setMode(gp.DocsViewMode.LIST);
     // 공유 드라이브(Shared drives)
     const drives = new gp.DocsView(gp.ViewId.DOCS).setEnableDrives(true).setIncludeFolders(true).setSelectFolderEnabled(true).setMode(gp.DocsViewMode.LIST);
+    // 폴더만 보여 주는 탭: 폴더를 고르면 하위 DICOM을 모두 받음
+    const folders = new gp.DocsView(gp.ViewId.FOLDERS).setIncludeFolders(true).setSelectFolderEnabled(true).setMode(gp.DocsViewMode.LIST);
     const builder = new gp.PickerBuilder()
       .addView(docs)
+      .addView(folders)
       .addView(drives)
       .enableFeature(gp.Feature.SUPPORT_DRIVES)
       .enableFeature(gp.Feature.MULTISELECT_ENABLED)
       .setOAuthToken(token)
-      .setTitle('DICOM 파일 또는 폴더 선택')
+      .setTitle('DICOM 파일 또는 폴더 선택 (폴더는 하위까지 모두 받음)')
       .setCallback((data) => {
         const action = data[gp.Response.ACTION];
         if (action === gp.Action.PICKED) resolve(data[gp.Response.DOCUMENTS] || []);
@@ -51,29 +56,33 @@ function showPicker(cfg, token) {
   });
 }
 
-async function listFolder(folderId, token, out = [], depth = 0) {
-  if (depth > 8) return out;
+/** 폴더 한 단계 목록 (페이지 전체) */
+async function listFolder(folderId, token, signal) {
+  const folders = [];
+  const files = [];
   let pageToken = '';
   do {
     const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,size)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${pageToken ? `&pageToken=${pageToken}` : ''}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,size,shortcutDetails)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${pageToken ? `&pageToken=${pageToken}` : ''}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
     if (!res.ok) throw driveError(res.status, '목록');
     const json = await res.json();
     for (const f of json.files || []) {
-      if (f.mimeType === FOLDER_MIME) await listFolder(f.id, token, out, depth + 1);
-      else if (!f.mimeType.startsWith('application/vnd.google-apps')) out.push(f);
+      // 폴더 바로가기(shortcut)는 대상 폴더로 따라감
+      const target = f.mimeType === SHORTCUT_MIME ? f.shortcutDetails : null;
+      if (f.mimeType === FOLDER_MIME || target?.targetMimeType === FOLDER_MIME) folders.push(target ? target.targetId : f.id);
+      else if (!f.mimeType.startsWith('application/vnd.google-apps')) files.push({ id: f.id, name: f.name, size: f.size });
     }
     pageToken = json.nextPageToken || '';
   } while (pageToken);
-  return out;
+  return { folders, files };
 }
 
 /**
- * Google Picker로 파일/폴더를 고르고 다운로드해서 File[] 반환
- * @param onProgress (done,total,label)
+ * Google Picker로 파일/폴더를 고르고, 폴더는 하위까지 재귀로 모아서 다운로드 → File[]
+ * @param onStatus 로딩 바 상태 ({label, done, total, detail})
  */
-export async function pickFromGoogleDrive(onProgress = () => {}) {
+export async function pickFromGoogleDrive(onStatus = () => {}, signal) {
   const cfg = getCloudConfig();
   if (!isGoogleConfigured(cfg)) throw new Error('Google Client ID / API Key가 설정되지 않았습니다. ⚙ 설정에서 입력하세요.');
   await ensureLibs();
@@ -81,33 +90,32 @@ export async function pickFromGoogleDrive(onProgress = () => {}) {
   const picked = await showPicker(cfg, token);
   if (!picked.length) return [];
 
-  onProgress(0, 0, 'Google Drive 목록 확인 중…');
-  const files = [];
-  for (const d of picked) {
-    if (d.mimeType === FOLDER_MIME) await listFolder(d.id, token, files);
-    else if (!d.mimeType?.startsWith('application/vnd.google-apps')) files.push({ id: d.id, name: d.name, size: d.sizeBytes });
-  }
-  let done = 0;
-  const failed = [];
-  const out = await mapLimit(files, 6, async (f) => {
-    try {
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw driveError(res.status, '다운로드');
-      const blob = await res.blob();
-      return new File([blob], f.name || f.id, { type: 'application/dicom' });
-    } catch (e) {
-      console.warn('Drive download failed', f.name, e);
-      failed.push(f.name);
-      return null;
-    } finally {
-      onProgress(++done, files.length, 'Google Drive에서 다운로드 중…');
-    }
+  const rootFolders = picked.filter((d) => d.mimeType === FOLDER_MIME).map((d) => d.id);
+  const direct = picked
+    .filter((d) => d.mimeType !== FOLDER_MIME && !d.mimeType?.startsWith('application/vnd.google-apps'))
+    .map((d) => ({ id: d.id, name: d.name, size: d.sizeBytes }));
+
+  onStatus(crawlStatus('Google Drive', { folders: 0, files: direct.length, skipped: 0, bytes: 0 }));
+  const { files: found } = await crawl(rootFolders, (id) => listFolder(id, token, signal), {
+    signal,
+    onProgress: (s) => onStatus(crawlStatus('Google Drive', { ...s, files: s.files + direct.length })),
   });
-  const ok = out.filter(Boolean);
-  if (!ok.length && failed.length) throw new Error(`파일 ${failed.length}개를 받지 못했습니다`);
-  return ok;
+  const files = [...direct, ...found];
+  if (!files.length) throw new Error('선택한 폴더에 받을 파일이 없습니다');
+
+  const { files: out } = await downloadAll(
+    files,
+    (f, sig) =>
+      fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: sig,
+      }).then((res) => {
+        if (res.status === 401) throw driveError(401, '다운로드');
+        return res;
+      }),
+    { signal, onProgress: (p) => onStatus(downloadStatus('Google Drive', p)) },
+  );
+  return out;
 }
 
 function driveError(status, what) {

@@ -1,5 +1,6 @@
 import { PublicClientApplication, InteractionRequiredAuthError } from '@azure/msal-browser';
-import { getCloudConfig, isOneDriveConfigured, mapLimit } from './config';
+import { getCloudConfig, isOneDriveConfigured } from './config';
+import { crawl, downloadAll, crawlStatus, downloadStatus } from './transfer';
 
 const SCOPES = ['Files.Read', 'Files.Read.All', 'User.Read'];
 const GRAPH = 'https://graph.microsoft.com/v1.0';
@@ -50,21 +51,22 @@ export async function signOutOneDrive() {
   if (account) await msal.logoutPopup({ account }).catch(() => {});
 }
 
-async function graph(path, token) {
+async function graph(path, token, signal) {
   const res = await fetch(path.startsWith('http') ? path : `${GRAPH}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
+    signal,
   });
   if (!res.ok) throw new Error(`Microsoft Graph 오류 ${res.status}`);
   return res.json();
 }
 
 /** 폴더 내용 (itemId 없으면 루트) */
-export async function listChildren(token, itemId, driveId) {
+export async function listChildren(token, itemId, driveId, signal) {
   const base = itemId ? (driveId ? `/drives/${driveId}/items/${itemId}` : `/me/drive/items/${itemId}`) : '/me/drive/root';
   const items = [];
   let url = `${base}/children?$top=500&$select=id,name,size,folder,file,parentReference,remoteItem`;
   while (url) {
-    const json = await graph(url, token);
+    const json = await graph(url, token, signal);
     items.push(...json.value);
     url = json['@odata.nextLink'] || null;
   }
@@ -76,40 +78,44 @@ export function isFolder(item) {
   return !!(item.folder || item.remoteItem?.folder);
 }
 
-async function collectFiles(token, item, out, depth = 0) {
-  if (depth > 8) return;
+/** 폴더 참조 { id, driveId } (다른 사람이 공유한 폴더는 remoteItem의 드라이브) */
+export function folderRef(item) {
   const target = item.remoteItem || item;
-  const driveId = target.parentReference?.driveId;
-  if (target.folder) {
-    const children = await listChildren(token, target.id, driveId);
-    for (const c of children) await collectFiles(token, c, out, depth + 1);
-  } else {
-    out.push({ id: target.id, name: target.name || item.name, driveId, size: target.size });
-  }
+  return { id: target.id, driveId: target.parentReference?.driveId, name: item.name };
 }
 
-/** 선택 항목(파일/폴더) 다운로드 → File[] */
-export async function downloadOneDriveItems(token, selected, onProgress = () => {}) {
-  onProgress(0, 0, 'OneDrive 목록 확인 중…');
-  const files = [];
-  for (const it of selected) await collectFiles(token, it, files);
-  let done = 0;
-  let failed = 0;
-  const out = await mapLimit(files, 6, async (f) => {
-    try {
+function fileRef(item) {
+  const target = item.remoteItem || item;
+  return { id: target.id, name: target.name || item.name, driveId: target.parentReference?.driveId, size: target.size };
+}
+
+/**
+ * 선택 항목(파일/폴더) → 폴더는 하위까지 재귀로 모아서 다운로드 → File[]
+ * @param onStatus 로딩 바 상태 ({label, done, total, detail})
+ */
+export async function downloadOneDriveItems(token, selected, onStatus = () => {}, signal) {
+  const roots = selected.filter(isFolder).map(folderRef);
+  const direct = selected.filter((it) => !isFolder(it)).map(fileRef);
+
+  onStatus(crawlStatus('OneDrive', { folders: 0, files: direct.length, skipped: 0, bytes: 0 }));
+  const { files: found } = await crawl(
+    roots,
+    async (ref) => {
+      const children = await listChildren(token, ref.id, ref.driveId, signal);
+      return { folders: children.filter(isFolder).map(folderRef), files: children.filter((c) => !isFolder(c)).map(fileRef) };
+    },
+    { signal, onProgress: (st) => onStatus(crawlStatus('OneDrive', { ...st, files: st.files + direct.length })) },
+  );
+  const files = [...direct, ...found];
+  if (!files.length) throw new Error('선택한 폴더에 받을 파일이 없습니다');
+
+  const { files: out } = await downloadAll(
+    files,
+    (f, sig) => {
       const path = f.driveId ? `/drives/${f.driveId}/items/${f.id}/content` : `/me/drive/items/${f.id}/content`;
-      const res = await fetch(`${GRAPH}${path}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error(res.status);
-      return new File([await res.blob()], f.name, { type: 'application/dicom' });
-    } catch (e) {
-      console.warn('OneDrive download failed', f.name, e);
-      failed++;
-      return null;
-    } finally {
-      onProgress(++done, files.length, 'OneDrive에서 다운로드 중…');
-    }
-  });
-  const ok = out.filter(Boolean);
-  if (!ok.length && failed) throw new Error(`파일 ${failed}개를 받지 못했습니다`);
-  return ok;
+      return fetch(`${GRAPH}${path}`, { headers: { Authorization: `Bearer ${token}` }, signal: sig });
+    },
+    { signal, onProgress: (p) => onStatus(downloadStatus('OneDrive', p)) },
+  );
+  return out;
 }

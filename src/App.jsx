@@ -19,6 +19,7 @@ import { filesFromDataTransfer, filesFromInput } from './dicom/loader';
 import { ingestFiles } from './dicom/ingest';
 import { pickFromGoogleDrive } from './cloud/googleDrive';
 import { isGoogleConfigured, isOneDriveConfigured } from './cloud/config';
+import { isAbort } from './cloud/transfer';
 import { HeaderBar, ToolBar } from './components/Toolbar';
 import SeriesPanel from './components/SeriesPanel';
 import ViewportGrid from './components/ViewportGrid';
@@ -79,13 +80,16 @@ export default function App() {
       setDialog('settings');
       return;
     }
+    const ac = new AbortController();
+    const onCancel = () => ac.abort();
     try {
-      const files = await pickFromGoogleDrive((done, total, label) => setLoading({ label, done, total }));
+      const files = await pickFromGoogleDrive((status) => setLoading({ ...status, onCancel }), ac.signal);
       setLoading(null);
       if (files.length) await ingestFiles(files, 'Google Drive');
     } catch (e) {
       setLoading(null);
-      showToast(`Google Drive: ${e.message || e}`, 'error');
+      if (isAbort(e) || ac.signal.aborted) showToast('Google Drive 불러오기를 취소했습니다');
+      else showToast(`Google Drive: ${e.message || e}`, 'error');
     }
   };
   const onOneDrive = () => {
@@ -228,18 +232,24 @@ export default function App() {
         </div>
       )}
       {loading && (
-        <div className="loading-bar">
-          <span>{loading.label}</span>
-          {loading.total > 0 && (
-            <>
-              <div className="progress">
-                <div style={{ width: `${(loading.done / loading.total) * 100}%` }} />
-              </div>
-              <span className="muted">
-                {loading.done}/{loading.total}
-              </span>
-            </>
-          )}
+        <div className="loading-bar" role="status">
+          <div className="loading-main">
+            <span>{loading.label}</span>
+            {loading.total > 0 && (
+              <>
+                <div className="progress">
+                  <div style={{ width: `${Math.min(100, (loading.done / loading.total) * 100)}%` }} />
+                </div>
+                <span className="muted">{loading.detail ? `${Math.floor((loading.done / loading.total) * 100)}%` : `${loading.done}/${loading.total}`}</span>
+              </>
+            )}
+            {loading.onCancel && (
+              <button className="btn sm" onClick={loading.onCancel}>
+                취소
+              </button>
+            )}
+          </div>
+          {loading.detail && <div className="loading-detail muted">{loading.detail}</div>}
         </div>
       )}
       {toast && <div className={`toast ${toast.kind}`}>{toast.message}</div>}
