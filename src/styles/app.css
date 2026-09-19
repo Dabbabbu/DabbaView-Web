@@ -942,6 +942,18 @@ code {
   color: var(--ok);
 }
 
+/* 캐시 사용량 */
+.cache-usage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.progress.wide {
+  flex: 1;
+  min-width: 140px;
+}
+
 /* 키 미입력 안내 */
 .key-notice {
   margin: -2px 0 2px;

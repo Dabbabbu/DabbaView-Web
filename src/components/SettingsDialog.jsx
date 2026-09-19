@@ -1,22 +1,64 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Modal from './Modal';
 import { getCloudConfig, saveCloudConfig, isGoogleConfigured, isOneDriveConfigured } from '../cloud/config';
 import { useStore } from '../store/useStore';
+import {
+  getCacheSettings,
+  saveCacheSettings,
+  cacheStats,
+  clearCache,
+  storageEstimate,
+  isCacheAvailable,
+  DEFAULT_LIMIT,
+} from '../cloud/cache';
+import { formatBytes } from '../cloud/transfer';
+
+const GB = 1024 ** 3;
 
 export default function SettingsDialog({ onClose }) {
   const [cfg, setCfg] = useState(getCloudConfig);
   const set = (k) => (e) => setCfg({ ...cfg, [k]: e.target.value.trim() });
+  const [cache, setCache] = useState(() => {
+    const c = getCacheSettings();
+    return { enabled: c.enabled, limitGb: +(c.limit / GB).toFixed(2) };
+  });
+  const [usage, setUsage] = useState(null); // { count, bytes, quota }
+  const [clearing, setClearing] = useState(false);
+
+  const refreshUsage = useCallback(async () => {
+    if (!isCacheAvailable()) return;
+    const [stats, est] = await Promise.all([cacheStats().catch(() => ({ count: 0, bytes: 0 })), storageEstimate()]);
+    setUsage({ ...stats, quota: est?.quota || 0 });
+  }, []);
+  useEffect(() => {
+    refreshUsage();
+  }, [refreshUsage]);
+
+  const onClear = async () => {
+    if (!window.confirm('캐시에 보관한 클라우드 파일을 모두 지울까요? (다음에 열 때 다시 다운로드합니다)')) return;
+    setClearing(true);
+    try {
+      await clearCache();
+      useStore.getState().showToast('캐시를 비웠습니다');
+    } catch (e) {
+      useStore.getState().showToast(`캐시 비우기 실패: ${e.message}`, 'error');
+    }
+    setClearing(false);
+    refreshUsage();
+  };
+  const limitBytes = Math.max(0.5, Number(cache.limitGb) || DEFAULT_LIMIT / GB) * GB;
   const origin = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
 
   const save = () => {
     saveCloudConfig(cfg);
+    saveCacheSettings({ enabled: cache.enabled, limit: limitBytes }); // 한도를 줄이면 오래된 것부터 바로 정리
     useStore.getState().showToast('설정 저장됨');
     onClose();
   };
 
   return (
     <Modal
-      title="설정 — 클라우드 연동"
+      title="설정"
       onClose={onClose}
       footer={
         <>
@@ -73,6 +115,49 @@ export default function SettingsDialog({ onClose }) {
         <p className="muted small">
           SPA Redirect URI: <code>{origin}auth-redirect.html</code>
         </p>
+
+        <h3>캐시 (클라우드 파일)</h3>
+        {!isCacheAvailable() ? (
+          <p className="muted small">이 브라우저는 IndexedDB를 지원하지 않아 캐시를 쓸 수 없습니다.</p>
+        ) : (
+          <>
+            <p className="muted small">
+              Google Drive / OneDrive에서 받은 파일을 이 브라우저에 보관해서, 같은 파일을 다시 열 때 다운로드 없이 바로 엽니다. 클라우드에서 파일이
+              바뀌면 새로 받습니다. 한도를 넘으면 가장 오래 안 쓴 파일부터 지웁니다.
+            </p>
+            <div className="cache-usage">
+              <div className="progress wide">
+                <div style={{ width: `${usage ? Math.min(100, (usage.bytes / limitBytes) * 100) : 0}%` }} />
+              </div>
+              <span className="small">
+                {usage ? `${formatBytes(usage.bytes)} / ${formatBytes(limitBytes)} · 파일 ${usage.count}개` : '계산 중…'}
+              </span>
+            </div>
+            {usage?.quota > 0 && <p className="muted small">브라우저가 이 사이트에 허용한 저장 공간: 약 {formatBytes(usage.quota)}</p>}
+            <label className="check">
+              <input type="checkbox" checked={cache.enabled} onChange={(e) => setCache({ ...cache, enabled: e.target.checked })} /> 캐시 사용
+            </label>
+            <label>
+              최대 크기 (GB)
+              <input
+                className="input"
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={cache.limitGb}
+                onChange={(e) => setCache({ ...cache, limitGb: e.target.value })}
+              />
+            </label>
+            {usage?.quota > 0 && limitBytes > usage.quota && (
+              <p className="warn">브라우저 허용량보다 큽니다. 실제로는 허용량까지만 저장됩니다.</p>
+            )}
+            <div className="row">
+              <button className="btn" disabled={clearing || !usage?.count} onClick={onClear}>
+                {clearing ? '지우는 중…' : 'Clear Cache'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </Modal>
   );

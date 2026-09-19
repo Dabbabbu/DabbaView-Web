@@ -1,5 +1,6 @@
 // Google Drive / OneDrive 공통: 폴더 재귀 탐색 + 병렬 다운로드 (진행률, 재시도, 취소)
 import { isObviouslyNotDicom } from '../dicom/loader';
+import { cacheGet, cachePut } from './cache';
 
 const MAX_DEPTH = 20;
 const LIST_CONCURRENCY = 4;
@@ -85,21 +86,24 @@ export async function crawl(roots, list, { signal, onProgress = () => {} } = {})
 
 /**
  * 파일들을 병렬로 받아 File[] 로 만든다. 바이트 단위 진행률, 429/5xx(및 Drive 속도 제한 403) 재시도.
+ * cacheKey가 있으면 브라우저 캐시(IndexedDB)에서 먼저 찾고, 새로 받은 파일은 캐시에 넣는다.
  * @param request (file, signal) => Promise<Response>
- * @param onProgress ({ done, total, bytes, totalBytes, failed })
+ * @param cacheKey (file) => string | null
+ * @param onProgress ({ done, total, bytes, totalBytes, failed, cached })
  */
-export async function downloadAll(files, request, { signal, onProgress = () => {} } = {}) {
+export async function downloadAll(files, request, { signal, onProgress = () => {}, cacheKey, cachePrefix, source } = {}) {
   const total = files.length;
   const totalBytes = files.reduce((s, f) => s + (Number(f.size) || 0), 0);
   let done = 0;
   let bytes = 0;
+  let cached = 0;
   const failed = [];
   let last = 0;
   const report = (force) => {
     const now = performance.now();
     if (!force && now - last < 100) return; // 초당 10회까지만 갱신
     last = now;
-    onProgress({ done, total, bytes, totalBytes, failed: failed.length });
+    onProgress({ done, total, bytes, totalBytes, failed: failed.length, cached });
   };
 
   const fetchOne = async (f) => {
@@ -121,7 +125,18 @@ export async function downloadAll(files, request, { signal, onProgress = () => {
       const i = next++;
       const f = files[i];
       let got = 0;
+      const key = cacheKey?.(f);
       try {
+        throwIfAborted(signal);
+        const hit = key ? await cacheGet(key) : null;
+        if (hit) {
+          out[i] = new File([hit], f.name || f.id, { type: 'application/octet-stream' });
+          bytes += hit.size;
+          cached++;
+          done++;
+          report();
+          continue;
+        }
         const res = await fetchOne(f);
         // 스트림으로 읽으며 바이트 진행률 갱신
         const reader = res.body?.getReader();
@@ -143,6 +158,7 @@ export async function downloadAll(files, request, { signal, onProgress = () => {
           bytes += got;
         }
         out[i] = new File([blob], f.name || f.id, { type: 'application/octet-stream' });
+        if (key) cachePut(key, blob, { name: f.name, source, replacePrefix: cachePrefix?.(f) }); // 기다리지 않음
       } catch (e) {
         if (isAbort(e) || signal?.aborted) throw abortError();
         console.warn('download failed', f.name, e);
@@ -157,7 +173,7 @@ export async function downloadAll(files, request, { signal, onProgress = () => {
   report(true);
   const ok = out.filter(Boolean);
   if (!ok.length && failed.length) throw new Error(`파일 ${failed.length}개를 받지 못했습니다`);
-  return { files: ok, failed };
+  return { files: ok, failed, cached };
 }
 
 export function formatBytes(b) {
@@ -185,6 +201,6 @@ export function downloadStatus(source, p) {
     label: `${source}에서 다운로드 중…`,
     done: useBytes ? p.bytes : p.done,
     total: useBytes ? p.totalBytes : p.total,
-    detail: `${p.done}/${p.total}개${useBytes ? ` · ${formatBytes(p.bytes)} / ${formatBytes(p.totalBytes)}` : ''}${p.failed ? ` · 실패 ${p.failed}` : ''}`,
+    detail: `${p.done}/${p.total}개${useBytes ? ` · ${formatBytes(p.bytes)} / ${formatBytes(p.totalBytes)}` : ''}${p.cached ? ` · 캐시 ${p.cached}개` : ''}${p.failed ? ` · 실패 ${p.failed}` : ''}`,
   };
 }

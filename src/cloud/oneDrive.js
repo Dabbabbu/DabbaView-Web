@@ -64,7 +64,7 @@ async function graph(path, token, signal) {
 export async function listChildren(token, itemId, driveId, signal) {
   const base = itemId ? (driveId ? `/drives/${driveId}/items/${itemId}` : `/me/drive/items/${itemId}`) : '/me/drive/root';
   const items = [];
-  let url = `${base}/children?$top=500&$select=id,name,size,folder,file,parentReference,remoteItem`;
+  let url = `${base}/children?$top=500&$select=id,name,size,folder,file,parentReference,remoteItem,cTag,eTag`;
   while (url) {
     const json = await graph(url, token, signal);
     items.push(...json.value);
@@ -86,8 +86,16 @@ export function folderRef(item) {
 
 function fileRef(item) {
   const target = item.remoteItem || item;
-  return { id: target.id, name: target.name || item.name, driveId: target.parentReference?.driveId, size: target.size };
+  return {
+    id: target.id,
+    name: target.name || item.name,
+    driveId: target.parentReference?.driveId,
+    size: target.size,
+    ver: target.cTag || target.eTag || item.cTag || item.eTag, // 내용이 바뀌면 달라짐
+  };
 }
+
+export const oneDriveCacheKey = (f) => (f.ver ? `onedrive:${f.driveId || 'me'}:${f.id}:${f.ver}` : null);
 
 /**
  * 선택 항목(파일/폴더) → 폴더는 하위까지 재귀로 모아서 다운로드 → File[]
@@ -115,7 +123,7 @@ export async function downloadOneDriveItems(token, selected, onStatus = () => {}
       const path = f.driveId ? `/drives/${f.driveId}/items/${f.id}/content` : `/me/drive/items/${f.id}/content`;
       return fetch(`${GRAPH}${path}`, { headers: { Authorization: `Bearer ${token}` }, signal: sig });
     },
-    { signal, onProgress: (p) => onStatus(downloadStatus('OneDrive', p)) },
+    { signal, onProgress: (p) => onStatus(downloadStatus('OneDrive', p)), cacheKey: oneDriveCacheKey, cachePrefix: (f) => `onedrive:${f.driveId || 'me'}:${f.id}:`, source: 'OneDrive' },
   );
   return out;
 }

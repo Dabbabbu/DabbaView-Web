@@ -63,7 +63,7 @@ async function listFolder(folderId, token, signal) {
   let pageToken = '';
   do {
     const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,size,shortcutDetails)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${pageToken ? `&pageToken=${pageToken}` : ''}`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,mimeType,size,md5Checksum,version,shortcutDetails)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${pageToken ? `&pageToken=${pageToken}` : ''}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
     if (!res.ok) throw driveError(res.status, '목록');
     const json = await res.json();
@@ -71,7 +71,7 @@ async function listFolder(folderId, token, signal) {
       // 폴더 바로가기(shortcut)는 대상 폴더로 따라감
       const target = f.mimeType === SHORTCUT_MIME ? f.shortcutDetails : null;
       if (f.mimeType === FOLDER_MIME || target?.targetMimeType === FOLDER_MIME) folders.push(target ? target.targetId : f.id);
-      else if (!f.mimeType.startsWith('application/vnd.google-apps')) files.push({ id: f.id, name: f.name, size: f.size });
+      else if (!f.mimeType.startsWith('application/vnd.google-apps')) files.push(fileRef(f));
     }
     pageToken = json.nextPageToken || '';
   } while (pageToken);
@@ -91,9 +91,12 @@ export async function pickFromGoogleDrive(onStatus = () => {}, signal) {
   if (!picked.length) return [];
 
   const rootFolders = picked.filter((d) => d.mimeType === FOLDER_MIME).map((d) => d.id);
-  const direct = picked
-    .filter((d) => d.mimeType !== FOLDER_MIME && !d.mimeType?.startsWith('application/vnd.google-apps'))
-    .map((d) => ({ id: d.id, name: d.name, size: d.sizeBytes }));
+  // 직접 고른 파일은 캐시 키에 쓸 내용 버전(md5)을 위해 메타데이터를 한 번 조회
+  const direct = await Promise.all(
+    picked
+      .filter((d) => d.mimeType !== FOLDER_MIME && !d.mimeType?.startsWith('application/vnd.google-apps'))
+      .map((d) => fileMeta(d, token, signal)),
+  );
 
   onStatus(crawlStatus('Google Drive', { folders: 0, files: direct.length, skipped: 0, bytes: 0 }));
   const { files: found } = await crawl(rootFolders, (id) => listFolder(id, token, signal), {
@@ -113,10 +116,30 @@ export async function pickFromGoogleDrive(onStatus = () => {}, signal) {
         if (res.status === 401) throw driveError(401, '다운로드');
         return res;
       }),
-    { signal, onProgress: (p) => onStatus(downloadStatus('Google Drive', p)) },
+    { signal, onProgress: (p) => onStatus(downloadStatus('Google Drive', p)), cacheKey: googleCacheKey, cachePrefix: (f) => `gdrive:${f.id}:`, source: 'Google Drive' },
   );
   return out;
 }
+
+function fileRef(f) {
+  return { id: f.id, name: f.name, size: f.size, ver: f.md5Checksum || f.version };
+}
+
+async function fileMeta(doc, token, signal) {
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${doc.id}?fields=id,name,size,md5Checksum,version&supportsAllDrives=true`,
+      { headers: { Authorization: `Bearer ${token}` }, signal },
+    );
+    if (res.ok) return fileRef(await res.json());
+  } catch (e) {
+    if (e?.name === 'AbortError') throw e;
+  }
+  return { id: doc.id, name: doc.name, size: doc.sizeBytes }; // 버전을 모르면 캐시하지 않음
+}
+
+/** 내용이 바뀌면 키도 바뀐다 (md5 또는 version) */
+export const googleCacheKey = (f) => (f.ver ? `gdrive:${f.id}:${f.ver}` : null);
 
 function driveError(status, what) {
   if (status === 401) {
