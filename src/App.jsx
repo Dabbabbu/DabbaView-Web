@@ -18,6 +18,7 @@ import { useStore, LAYOUTS } from './store/useStore';
 import { filesFromDataTransfer, filesFromInput } from './dicom/loader';
 import { ingestFiles } from './dicom/ingest';
 import { pickFromGoogleDrive } from './cloud/googleDrive';
+import { isGoogleConfigured, isOneDriveConfigured } from './cloud/config';
 import { HeaderBar, ToolBar } from './components/Toolbar';
 import SeriesPanel from './components/SeriesPanel';
 import ViewportGrid from './components/ViewportGrid';
@@ -72,7 +73,12 @@ export default function App() {
   // ── 파일 열기 ──
   const onFiles = (list) => ingestFiles(filesFromInput(list), '파일');
   const onGoogleDrive = async () => {
-    const { setLoading, showToast } = useStore.getState();
+    const { setLoading, showToast, setDialog } = useStore.getState();
+    if (!isGoogleConfigured()) {
+      showToast('Google Drive를 쓰려면 먼저 Client ID와 API Key를 설정하세요', 'error');
+      setDialog('settings');
+      return;
+    }
     try {
       const files = await pickFromGoogleDrive((done, total, label) => setLoading({ label, done, total }));
       setLoading(null);
@@ -80,11 +86,15 @@ export default function App() {
     } catch (e) {
       setLoading(null);
       showToast(`Google Drive: ${e.message || e}`, 'error');
-      if (/Client ID/.test(e.message)) useStore.getState().setDialog('settings');
     }
   };
   const onOneDrive = () => {
-    const { setDialog } = useStore.getState();
+    const { setDialog, showToast } = useStore.getState();
+    if (!isOneDriveConfigured()) {
+      showToast('OneDrive를 쓰려면 먼저 Microsoft Client ID를 설정하세요', 'error');
+      setDialog('settings');
+      return;
+    }
     setDialog('onedrive');
   };
 

@@ -1,5 +1,5 @@
 import { PublicClientApplication, InteractionRequiredAuthError } from '@azure/msal-browser';
-import { getCloudConfig, mapLimit } from './config';
+import { getCloudConfig, isOneDriveConfigured, mapLimit } from './config';
 
 const SCOPES = ['Files.Read', 'Files.Read.All', 'User.Read'];
 const GRAPH = 'https://graph.microsoft.com/v1.0';
@@ -9,7 +9,7 @@ let msalClientId = null;
 
 async function getMsal() {
   const cfg = getCloudConfig();
-  if (!cfg.msClientId) throw new Error('Microsoft Client ID가 설정되지 않았습니다. ⚙ 설정에서 입력하세요.');
+  if (!isOneDriveConfigured(cfg)) throw new Error('Microsoft Client ID가 설정되지 않았습니다. ⚙ 설정에서 입력하세요.');
   if (msal && msalClientId === cfg.msClientId) return msal;
   msal = await PublicClientApplication.createPublicClientApplication({
     auth: {
@@ -68,7 +68,12 @@ export async function listChildren(token, itemId, driveId) {
     items.push(...json.value);
     url = json['@odata.nextLink'] || null;
   }
-  return items.sort((a, b) => !!b.folder - !!a.folder || a.name.localeCompare(b.name));
+  return items.sort((a, b) => isFolder(b) - isFolder(a) || a.name.localeCompare(b.name));
+}
+
+/** 내 폴더 또는 다른 드라이브에서 공유된 폴더(remoteItem) */
+export function isFolder(item) {
+  return !!(item.folder || item.remoteItem?.folder);
 }
 
 async function collectFiles(token, item, out, depth = 0) {
@@ -89,6 +94,7 @@ export async function downloadOneDriveItems(token, selected, onProgress = () => 
   const files = [];
   for (const it of selected) await collectFiles(token, it, files);
   let done = 0;
+  let failed = 0;
   const out = await mapLimit(files, 6, async (f) => {
     try {
       const path = f.driveId ? `/drives/${f.driveId}/items/${f.id}/content` : `/me/drive/items/${f.id}/content`;
@@ -97,10 +103,13 @@ export async function downloadOneDriveItems(token, selected, onProgress = () => 
       return new File([await res.blob()], f.name, { type: 'application/dicom' });
     } catch (e) {
       console.warn('OneDrive download failed', f.name, e);
+      failed++;
       return null;
     } finally {
       onProgress(++done, files.length, 'OneDrive에서 다운로드 중…');
     }
   });
-  return out.filter(Boolean);
+  const ok = out.filter(Boolean);
+  if (!ok.length && failed) throw new Error(`파일 ${failed}개를 받지 못했습니다`);
+  return ok;
 }

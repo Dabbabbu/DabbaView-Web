@@ -1,4 +1,4 @@
-import { init as coreInit, RenderingEngine } from '@cornerstonejs/core';
+import { init as coreInit, RenderingEngine, getRenderingEngine } from '@cornerstonejs/core';
 import { init as dicomLoaderInit } from '@cornerstonejs/dicom-image-loader';
 import {
   init as toolsInit,
@@ -15,6 +15,7 @@ import {
   ProbeTool,
   CrosshairsTool,
 } from '@cornerstonejs/tools';
+import PinchZoomTool from './PinchZoomTool';
 
 export const RENDERING_ENGINE_ID = 'dabbaview-engine';
 
@@ -42,13 +43,15 @@ export function initCornerstone() {
       PlanarFreehandROITool,
       ProbeTool,
       CrosshairsTool,
+      PinchZoomTool,
     ].forEach((T) => addTool(T));
-    engine = new RenderingEngine(RENDERING_ENGINE_ID);
+    engine = getRenderingEngine(RENDERING_ENGINE_ID) || new RenderingEngine(RENDERING_ENGINE_ID);
     return engine;
   })();
   return initPromise;
 }
 
 export function getEngine() {
-  return engine;
+  // 개발 중 HMR로 이 모듈이 다시 실행돼도 Cornerstone 레지스트리의 엔진을 찾는다
+  return engine || getRenderingEngine(RENDERING_ENGINE_ID);
 }

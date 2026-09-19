@@ -908,6 +908,22 @@ code {
   white-space: nowrap;
 }
 
+/* 설정 상태 배지 */
+.status {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--bg-4);
+  color: var(--muted);
+  vertical-align: middle;
+}
+.status.ok {
+  background: rgba(76, 208, 138, 0.15);
+  color: var(--ok);
+}
+
 /* ─────────── 버전 표기 ─────────── */
 .brand {
   cursor: pointer;

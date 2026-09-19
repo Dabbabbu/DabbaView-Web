@@ -9,7 +9,7 @@ export const instanceMeta = new Map();
 /** imageId → dicomParser dataset url 키 (dataSetCacheManager 키) */
 export const imageIdToUrl = new Map();
 
-const SKIP_EXT = /\.(txt|xml|json|html?|pdf|jpe?g|png|gif|bmp|zip|exe|dll|ini|db|ds_store|md|csv)$/i;
+const SKIP_EXT = /\.(txt|xml|json|html?|pdf|jpe?g|png|gif|bmp|exe|dll|ini|db|ds_store|md|csv)$/i;
 
 // ─────────────────────────── 파일 수집 ───────────────────────────
 

@@ -78,6 +78,24 @@ export function flip(horizontal) {
   vp.render();
 }
 
+/**
+ * 새 스택을 띄운 뒤 카메라가 영상 법선의 반대편을 보고 있으면(사용자가 반전하지 않았는데 좌우가 뒤집힌 상태)
+ * Cornerstone 기본 방향(viewPlaneNormal = -영상 법선, 방사선과 표준 표시)으로 되돌린다.
+ */
+export function ensureStandardOrientation(vp) {
+  const direction = vp?.getImageData?.()?.direction;
+  if (!direction) return false;
+  const cam = vp.getCamera();
+  if (cam.flipHorizontal || cam.flipVertical) return false;
+  const expected = [-direction[6], -direction[7], -direction[8]];
+  const n = cam.viewPlaneNormal;
+  if (n[0] * expected[0] + n[1] * expected[1] + n[2] * expected[2] >= 0) return false;
+  vp.setCamera({ viewPlaneNormal: expected, viewUp: [-direction[3], -direction[4], -direction[5]] });
+  vp.resetCamera();
+  console.warn('[DabbaView] 카메라 방향이 뒤집혀 있어 표준 방향으로 복원했습니다');
+  return true;
+}
+
 export function resetView() {
   const vp = getActiveViewport();
   if (!vp) return;

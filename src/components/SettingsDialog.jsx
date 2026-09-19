@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Modal from './Modal';
-import { getCloudConfig, saveCloudConfig } from '../cloud/config';
+import { getCloudConfig, saveCloudConfig, isGoogleConfigured, isOneDriveConfigured } from '../cloud/config';
 import { useStore } from '../store/useStore';
 
 export default function SettingsDialog({ onClose }) {
@@ -34,7 +34,9 @@ export default function SettingsDialog({ onClose }) {
           값은 이 브라우저(localStorage)에만 저장됩니다. 빌드 시 <code>.env</code>의 <code>VITE_*</code> 값이 기본값으로 쓰입니다. 자세한 발급 방법은 README를
           참고하세요.
         </p>
-        <h3>Google Drive</h3>
+        <h3>
+          Google Drive <Status ok={isGoogleConfigured(cfg)} />
+        </h3>
         <label>
           OAuth Client ID
           <input className="input" value={cfg.googleClientId} onChange={set('googleClientId')} placeholder="xxxx.apps.googleusercontent.com" />
@@ -51,7 +53,9 @@ export default function SettingsDialog({ onClose }) {
           승인된 JavaScript 원본: <code>{window.location.origin}</code>
         </p>
 
-        <h3>OneDrive (Microsoft)</h3>
+        <h3>
+          OneDrive (Microsoft) <Status ok={isOneDriveConfigured(cfg)} />
+        </h3>
         <label>
           Application (client) ID
           <input className="input" value={cfg.msClientId} onChange={set('msClientId')} placeholder="00000000-0000-0000-0000-000000000000" />
@@ -66,4 +70,8 @@ export default function SettingsDialog({ onClose }) {
       </div>
     </Modal>
   );
+}
+
+function Status({ ok }) {
+  return <span className={`status ${ok ? 'ok' : ''}`}>{ok ? '설정됨' : '미설정'}</span>;
 }

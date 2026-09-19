@@ -22,6 +22,9 @@ export function getCloudConfig() {
   return merged;
 }
 
+export const isGoogleConfigured = (cfg = getCloudConfig()) => !!(cfg.googleClientId && cfg.googleApiKey);
+export const isOneDriveConfigured = (cfg = getCloudConfig()) => !!cfg.msClientId;
+
 export function saveCloudConfig(cfg) {
   try {
     localStorage.setItem(KEY, JSON.stringify(cfg));

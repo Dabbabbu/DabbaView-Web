@@ -3,7 +3,7 @@ import { Enums } from '@cornerstonejs/core';
 import { utilities as toolUtils } from '@cornerstonejs/tools';
 import { getEngine } from '../cornerstone/init';
 import { getStackGroup } from '../cornerstone/tools';
-import { stackViewportId } from '../cornerstone/actions';
+import { stackViewportId, ensureStandardOrientation } from '../cornerstone/actions';
 import { buildOverlay } from '../cornerstone/overlay';
 import { useStore, getSeries } from '../store/useStore';
 import ViewportOverlay from './ViewportOverlay';
@@ -90,12 +90,14 @@ export default function StackViewport({ index }) {
     vp.setStack(s.imageIds, 0)
       .then(() => {
         vp.resetCamera();
+        ensureStandardOrientation(vp);
         vp.render();
         setOverlay(buildOverlay(vp));
         // 레이아웃 전환 직후 캔버스 크기가 확정된 뒤 한 번 더 그림
         requestAnimationFrame(() => {
           if (engine.getViewport(viewportId) === vp) {
             vp.resetCamera();
+            ensureStandardOrientation(vp);
             vp.render();
           }
         });

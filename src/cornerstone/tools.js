@@ -13,6 +13,7 @@ import {
   ProbeTool,
   CrosshairsTool,
 } from '@cornerstonejs/tools';
+import PinchZoomTool from './PinchZoomTool';
 
 const { MouseBindings, KeyboardBindings } = ToolEnums;
 
@@ -51,7 +52,7 @@ const ANNOTATION_TOOLS = [
 function baseBindings(group, { mpr = false } = {}) {
   group.addTool(WindowLevelTool.toolName);
   group.addTool(PanTool.toolName);
-  group.addTool(ZoomTool.toolName, { minZoomScale: 0.05, maxZoomScale: 40, pinchToZoom: true });
+  group.addTool(ZoomTool.toolName, { minZoomScale: 0.05, maxZoomScale: 40 });
   group.addTool(StackScrollTool.toolName, { loop: false });
   ANNOTATION_TOOLS.forEach((t) => group.addTool(t));
 
@@ -69,9 +70,11 @@ function baseBindings(group, { mpr = false } = {}) {
       { mouseButton: MouseBindings.Primary, modifierKey: KeyboardBindings.Ctrl },
       { mouseButton: MouseBindings.Wheel, modifierKey: KeyboardBindings.Ctrl },
       { mouseButton: MouseBindings.Wheel, modifierKey: KeyboardBindings.Meta },
-      { numTouchPoints: 2 },
     ],
   });
+  // 두 손가락: 손가락 간격 비율로 확대 + 이동
+  group.addTool(PinchZoomTool.toolName);
+  group.setToolActive(PinchZoomTool.toolName, { bindings: [{ numTouchPoints: 2 }] });
   group.setToolActive(StackScrollTool.toolName, {
     bindings: [{ mouseButton: MouseBindings.Wheel }],
   });

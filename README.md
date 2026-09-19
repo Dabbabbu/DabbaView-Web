@@ -11,9 +11,10 @@
 
 ### 불러오기
 - **로컬 파일/폴더 드래그 앤 드롭** (하위 폴더 포함), **파일 열기 / 폴더 열기**
-- **Google Drive**: Google Picker로 파일·폴더 선택 → Drive API로 다운로드 → 로드 (폴더는 하위까지 재귀)
-- **OneDrive**: MSAL.js 로그인 → Microsoft Graph로 폴더 탐색·선택 → 다운로드 → 로드
+- **Google Drive**: Google Picker로 파일·폴더 선택(내 드라이브 + 공유 드라이브) → Drive API로 다운로드 → 로드 (폴더는 하위까지 재귀)
+- **OneDrive**: MSAL.js 로그인 → Microsoft Graph로 폴더 탐색·선택(다른 사람이 공유한 폴더 포함) → 다운로드 → 로드
 - **시리즈 자동 분류**: SeriesInstanceUID 기준, 한 시리즈 안에 방향이 여럿이면(로컬라이저 등) 방향별로 분리, 위치/Instance Number로 정렬, 멀티프레임 지원
+- **ZIP 자동 해제**: 로컬·Google Drive·OneDrive의 `.zip`을 풀어서 로드 (DEFLATE/STORE, ZIP 안의 ZIP까지, 깨진 ZIP은 건너뛰고 알림)
 - DICOM이 아닌 파일, 영상이 없는 객체(SR, PR, DICOMDIR)는 건너뜀
 - 압축 전송 구문(JPEG Baseline/Lossless, JPEG-LS, JPEG 2000, HTJ2K, RLE) 디코딩 — Web Worker + WASM
 
@@ -38,7 +39,7 @@
 
 ### 모바일
 - 반응형 레이아웃: 하단 도구 막대, 시리즈 패널은 서랍(drawer), MPR은 세로 3단
-- 터치: 1손가락 = 선택 도구(기본: 스와이프 스크롤), 2손가락 = 핀치 줌 + 이동
+- 터치: 1손가락 = 선택 도구(기본: 스와이프 스크롤), 2손가락 = 핀치 줌(손가락 간격 비율대로, 두 손가락 가운데 기준) + 이동
 
 ### 내보내기
 - **PNG / JPEG** 저장 (오버레이·측정 포함 여부 선택)
@@ -75,7 +76,7 @@ npm start            # http://localhost:8080  (PORT=3000 npm start 로 포트 �
 
 ## 클라우드 연동 설정
 
-키는 `.env`(빌드 시 기본값) 또는 앱의 **⚙ 설정** 창(이 브라우저의 localStorage에 저장)에 넣습니다.
+키는 `.env`(빌드 시 기본값), GitHub 저장소 Variables(Pages 빌드), 또는 앱의 **⚙ 설정** 창(이 브라우저의 localStorage에 저장)에 넣습니다. 키가 없을 때 Google Drive/OneDrive 버튼을 누르면 설정 창이 열리고, 각 서비스 옆에 `설정됨/미설정`이 표시됩니다.
 
 ```bash
 cp .env.example .env   # 값 입력 후 npm run dev / npm run build

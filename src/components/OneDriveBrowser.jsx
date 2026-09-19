@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from './Modal';
-import { getGraphToken, listChildren, downloadOneDriveItems, signOutOneDrive } from '../cloud/oneDrive';
+import { getGraphToken, listChildren, downloadOneDriveItems, signOutOneDrive, isFolder } from '../cloud/oneDrive';
 import { useStore } from '../store/useStore';
 import { ingestFiles } from '../dicom/ingest';
 import { Icon } from './Icons';
@@ -37,6 +37,7 @@ export default function OneDriveBrowser({ onClose }) {
     if (!token) return;
     let alive = true;
     setBusy('불러오는 중…');
+    setError('');
     listChildren(token, cur.id, cur.driveId)
       .then((list) => alive && setItems(list))
       .catch((e) => alive && setError(e.message))
@@ -103,14 +104,13 @@ export default function OneDriveBrowser({ onClose }) {
       </div>
       <div className="file-list">
         {items.map((it) => {
-          const isFolder = !!(it.folder || it.remoteItem?.folder);
           return (
             <div key={it.id} className={`file-row ${selected.has(it.id) ? 'sel' : ''}`}>
               <input type="checkbox" checked={selected.has(it.id)} onChange={() => toggle(it)} />
-              <button className="file-name" onClick={() => (isFolder ? open(it) : toggle(it))}>
-                <Icon name={isFolder ? 'folder' : 'open'} size={16} /> {it.name}
+              <button className="file-name" onClick={() => (isFolder(it) ? open(it) : toggle(it))}>
+                <Icon name={isFolder(it) ? 'folder' : 'open'} size={16} /> {it.name}
               </button>
-              <span className="muted small">{isFolder ? `${(it.folder || it.remoteItem.folder).childCount ?? ''} 항목` : fmtSize(it.size)}</span>
+              <span className="muted small">{isFolder(it) ? `${(it.folder || it.remoteItem.folder).childCount ?? ''} 항목` : fmtSize(it.size)}</span>
             </div>
           );
         })}
