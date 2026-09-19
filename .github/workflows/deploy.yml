@@ -32,6 +32,8 @@ jobs:
           VITE_GOOGLE_APP_ID: ${{ vars.VITE_GOOGLE_APP_ID }}
           VITE_MS_CLIENT_ID: ${{ vars.VITE_MS_CLIENT_ID }}
       - run: touch dist/.nojekyll
+      - name: Version
+        run: echo "Building DabbaView Web v$(node -p "require('./package.json').version")" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
@@ -45,3 +47,8 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+      # 배포된 주소를 실행 요약과 알림에 표시 (DabbaView 앱의 Deploy Web이 이 주소를 보여줌)
+      - name: Deployed URL
+        run: |
+          echo "### Deployed: ${{ steps.deployment.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Deployed::${{ steps.deployment.outputs.page_url }}"
