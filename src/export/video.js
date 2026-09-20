@@ -160,9 +160,29 @@ async function withTempViewport(size, fn) {
   }
 }
 
-export function safeFileName(series) {
-  const raw = [series.modality, series.seriesNumber, series.seriesDescription].filter(Boolean).join('_');
-  return (raw || 'series').replace(/[^\w가-힣.-]+/g, '_').slice(0, 80);
+/** 파일 이름에 쓸 수 없는 문자만 정리 (공백·한글은 그대로 둔다) */
+export function sanitizeName(text = '') {
+  return text
+    // eslint-disable-next-line no-control-regex
+    .replace(/[/\\:*?"<>|\x00-\x1f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[.\s]+|[.\s]+$/g, '')
+    .slice(0, 80);
+}
+
+/** 시리즈 이름 (설명이 없으면 프로토콜/모달리티로 대체) */
+export function seriesBaseName(series) {
+  return sanitizeName(series?.seriesDescription || series?.meta?.protocolName || series?.modality || '') || 'series';
+}
+
+/**
+ * 내보내기 파일 이름: {SeriesDescription}_{번호}.{확장자} (예: `Ax T2_001.gif`)
+ * 하나만 내보낼 때는 번호를 붙이지 않는다 (예: `Ax T2.gif`).
+ */
+export function exportFileName(base, ext, { index, total } = {}) {
+  const name = sanitizeName(base) || 'series';
+  const numbered = total > 1 && Number.isInteger(index);
+  return `${name}${numbered ? `_${String(index + 1).padStart(3, '0')}` : ''}.${ext}`;
 }
 
 /**
@@ -192,7 +212,10 @@ export async function batchExport(seriesList, { format = 'gif', fps = 10, maxSiz
             onProgress({ seriesDone: i, seriesTotal: seriesList.length, name: series.seriesDescription, frame, frames }),
         });
       });
-      files.push({ name: `${String(i + 1).padStart(2, '0')}_${safeFileName(series)}.${videoExtension(format)}`, bytes: new Uint8Array(await blob.arrayBuffer()) });
+      files.push({
+        name: exportFileName(seriesBaseName(series), videoExtension(format), { index: i, total: seriesList.length }),
+        bytes: new Uint8Array(await blob.arrayBuffer()),
+      });
     } catch (e) {
       if (e?.name === 'AbortError') throw e;
       console.warn('batch export failed', series.seriesDescription, e);

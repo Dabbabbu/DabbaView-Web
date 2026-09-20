@@ -98,7 +98,6 @@ export async function saveImage(viewport, format = 'png', opts = {}) {
   const canvas = await composeViewport(viewport, opts);
   const type = format === 'jpeg' ? 'image/jpeg' : 'image/png';
   const blob = await new Promise((r) => canvas.toBlob(r, type, 0.92));
-  const id = viewport.getCurrentImageId?.() || 'image';
-  const safe = (opts.baseName || id.replace(/[^a-z0-9]+/gi, '_')).slice(0, 60);
-  downloadBlob(blob, `${safe}.${format === 'jpeg' ? 'jpg' : 'png'}`);
+  const fallback = `${(viewport.getCurrentImageId?.() || 'image').replace(/[^a-z0-9]+/gi, '_').slice(0, 60)}.${format === 'jpeg' ? 'jpg' : 'png'}`;
+  downloadBlob(blob, opts.fileName || fallback);
 }

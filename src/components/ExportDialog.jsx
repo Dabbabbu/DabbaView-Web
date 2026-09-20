@@ -3,7 +3,7 @@ import { Enums } from '@cornerstonejs/core';
 import Modal from './Modal';
 import { getActiveViewport } from '../cornerstone/actions';
 import { saveImage } from '../export/capture';
-import { makeVideo, videoExtension, batchExport, supportsWebm, safeFileName, downloadBlob } from '../export/video';
+import { makeVideo, videoExtension, batchExport, supportsWebm, exportFileName, seriesBaseName, downloadBlob } from '../export/video';
 import { useStore } from '../store/useStore';
 import { instanceMeta } from '../dicom/loader';
 import { isAbort } from '../cloud/transfer';
@@ -22,15 +22,19 @@ export default function ExportDialog({ onClose }) {
   const vp = getActiveViewport();
   const toast = useStore.getState().showToast;
 
+  // 파일 이름은 시리즈 설명 기준: {SeriesDescription}_{번호}.{확장자}
+  const activeSeries = useStore((s) => s.series.find((x) => x.key === activeKey));
   const baseName = () => {
     const m = instanceMeta.get(vp?.getCurrentImageId?.()) || {};
-    return [m.modality, m.seriesNumber, (m.seriesDescription || '').replace(/[^\w가-힣-]+/g, '_')].filter(Boolean).join('_') || 'dabbaview';
+    return seriesBaseName(activeSeries || { seriesDescription: m.seriesDescription, meta: m, modality: m.modality });
   };
 
   const doImage = async (fmt) => {
     if (!vp) return;
     try {
-      await saveImage(vp, fmt, { overlay, annotations, baseName: `${baseName()}_${(vp.getCurrentImageIdIndex?.() ?? 0) + 1}` });
+      // 현재 슬라이스 번호를 붙인다 (한 장짜리 시리즈면 번호 없음)
+      const name = exportFileName(baseName(), fmt === 'jpeg' ? 'jpg' : 'png', { index: vp.getCurrentImageIdIndex?.() ?? 0, total: frames });
+      await saveImage(vp, fmt, { overlay, annotations, fileName: name });
     } catch (e) {
       toast(`저장 실패: ${e.message}`, 'error');
     }
@@ -50,7 +54,7 @@ export default function ExportDialog({ onClose }) {
         signal: ac.signal,
         onProgress: (done, total) => setProgress({ label: `${format.toUpperCase()} 만드는 중…`, done, total }),
       });
-      downloadBlob(blob, `${baseName()}.${videoExtension(format)}`);
+      downloadBlob(blob, exportFileName(baseName(), videoExtension(format)));
       toast(`${format.toUpperCase()} 저장 완료`);
     } catch (e) {
       if (isAbort(e)) toast('내보내기를 취소했습니다');
