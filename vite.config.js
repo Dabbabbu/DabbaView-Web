@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
+import * as nodeFs from 'node:fs';
+
+const require_fs = () => nodeFs;
 import react from '@vitejs/plugin-react';
 import { viteCommonjs } from '@originjs/vite-plugin-commonjs';
 
@@ -14,7 +17,22 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_DATE__: JSON.stringify(new Date().toLocaleDateString('sv-SE')), // YYYY-MM-DD (로컬 시간)
   },
-  plugins: [react(), viteCommonjs()],
+  plugins: [
+    react(),
+    viteCommonjs(),
+    {
+      // 배포본에 version.json을 함께 올려, 열어 둔 탭이 새 배포를 알아채게 함
+      name: 'dabbaview-version-json',
+      closeBundle() {
+        const { writeFileSync, mkdirSync } = require_fs();
+        mkdirSync(resolve(import.meta.dirname, 'dist'), { recursive: true });
+        writeFileSync(
+          resolve(import.meta.dirname, 'dist/version.json'),
+          JSON.stringify({ version: pkg.version, built: new Date().toISOString() }, null, 2),
+        );
+      },
+    },
+  ],
   optimizeDeps: {
     exclude: ['@cornerstonejs/dicom-image-loader'],
     include: ['dicom-parser'],

@@ -33,6 +33,7 @@ import SettingsDialog from './components/SettingsDialog';
 import OneDriveBrowser from './components/OneDriveBrowser';
 import HelpDialog from './components/HelpDialog';
 import AboutDialog from './components/AboutDialog';
+import UpdateBanner from './components/UpdateBanner';
 import { APP_TITLE } from './version';
 import { Icon } from './components/Icons';
 
@@ -207,6 +208,7 @@ export default function App() {
 
   return (
     <div className={`app ${panelOpen ? 'panel-open' : ''}`}>
+      <UpdateBanner />
       <HeaderBar
         onOpenFiles={() => fileInput.current?.click()}
         onOpenFolder={() => folderInput.current?.click()}

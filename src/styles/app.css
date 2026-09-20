@@ -1101,3 +1101,28 @@ code {
     min-width: 50px;
   }
 }
+
+/* 새 버전 알림 띠 (배포 후 캐시 때문에 옛 버전이 남을 수 있어 새로고침을 권함) */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #1d3557;
+  color: #eaf1ff;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.update-banner b { color: #ffd479; }
+.update-banner button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 4px 12px;
+  cursor: pointer;
+  background: var(--bg-3);
+  color: inherit;
+}
+.update-banner button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.update-banner button.ghost { background: transparent; }
+.update-banner a { color: #cfe0ff; margin-left: auto; }

@@ -1,7 +1,7 @@
 {
   "name": "dabbaview-web",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "DabbaView Web - browser-based DICOM viewer (Cornerstone3D + React + Vite)",
   "scripts": {
