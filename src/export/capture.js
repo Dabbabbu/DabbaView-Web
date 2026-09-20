@@ -1,5 +1,3 @@
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
-import { Enums, utilities as csUtils } from '@cornerstonejs/core';
 import { overlayCache, buildOverlay } from '../cornerstone/overlay';
 import { downloadBlob } from './zip';
 
@@ -103,46 +101,4 @@ export async function saveImage(viewport, format = 'png', opts = {}) {
   const id = viewport.getCurrentImageId?.() || 'image';
   const safe = (opts.baseName || id.replace(/[^a-z0-9]+/gi, '_')).slice(0, 60);
   downloadBlob(blob, `${safe}.${format === 'jpeg' ? 'jpg' : 'png'}`);
-}
-
-function waitRendered(element) {
-  return new Promise((resolve) => {
-    const done = () => {
-      element.removeEventListener(Enums.Events.IMAGE_RENDERED, done);
-      clearTimeout(t);
-      resolve();
-    };
-    const t = setTimeout(done, 400);
-    element.addEventListener(Enums.Events.IMAGE_RENDERED, done);
-  });
-}
-
-/**
- * 스택(또는 MPR 평면) 전체를 GIF로 내보내기
- */
-export async function exportGif(viewport, { fps = 10, overlay = true, maxSize = 512, onProgress = () => {}, baseName = 'cine' } = {}) {
-  const isStack = viewport.type === Enums.ViewportType.STACK;
-  const total = isStack ? viewport.getImageIds().length : viewport.getNumberOfSlices();
-  const startIndex = isStack ? viewport.getCurrentImageIdIndex() : viewport.getSliceIndex();
-  const gif = GIFEncoder();
-  const delay = Math.round(1000 / fps);
-
-  for (let i = 0; i < total; i++) {
-    const rendered = waitRendered(viewport.element);
-    await csUtils.jumpToSlice(viewport.element, { imageIndex: i });
-    viewport.render();
-    await rendered;
-    buildOverlay(viewport);
-    const canvas = await composeViewport(viewport, { overlay, maxSize });
-    const { data, width, height } = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
-    const palette = quantize(data, 256);
-    const indexed = applyPalette(data, palette);
-    gif.writeFrame(indexed, width, height, { palette, delay });
-    onProgress(i + 1, total);
-    if (i % 5 === 0) await new Promise((r) => setTimeout(r, 0));
-  }
-  gif.finish();
-  await csUtils.jumpToSlice(viewport.element, { imageIndex: startIndex });
-  viewport.render();
-  downloadBlob(new Blob([gif.bytes()], { type: 'image/gif' }), `${baseName}.gif`);
 }

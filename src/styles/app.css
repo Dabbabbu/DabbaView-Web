@@ -903,6 +903,9 @@ code {
   color: var(--muted);
   margin-right: 6px;
 }
+.export-list {
+  max-height: 28vh;
+}
 .file-list {
   border: 1px solid var(--line);
   border-radius: var(--radius);
