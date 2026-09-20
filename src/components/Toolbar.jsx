@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore, getSeries } from '../store/useStore';
+import { getPhases } from '../dicom/phases';
 import { Icon } from './Icons';
 import { APP_TITLE, APP_VERSION } from '../version';
 import { alignToActive } from '../cornerstone/sync';
@@ -28,6 +29,7 @@ const TOOLS = [
   { key: 'Ellipse', icon: 'ellipse', label: '타원', title: '타원 ROI' },
   { key: 'Freehand', icon: 'freehand', label: '자유', title: '자유곡선 ROI' },
   { key: 'Probe', icon: 'probe', label: 'Probe', title: '픽셀 값' },
+  { key: 'Cursor3D', icon: 'cursor3d', label: '3D', title: '3D 커서 — 클릭한 지점의 환자 좌표(L/P/S)와 값, 다른 칸에 초록 커서 표시' },
 ];
 
 export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive }) {
@@ -167,6 +169,8 @@ export function ToolBar() {
   const activeTool = useStore((s) => s.activeTool);
   const mode = useStore((s) => s.mode);
   const syncScroll = useStore((s) => s.syncScroll);
+  const crosslink = useStore((s) => s.crosslink);
+  const referenceLines = useStore((s) => s.referenceLines);
   const selectedCount = useStore((s) => s.selected.length);
   const activeIndex = useStore((s) => s.activeIndex);
   const cine = useStore((s) => s.cine[s.activeIndex]) || { playing: false, fps: 15 };
@@ -269,6 +273,22 @@ export function ToolBar() {
       <div className="tsep" />
       <div className="tgroup">
         <button
+          className={`tool ${crosslink ? 'on' : ''}`}
+          title={'Crosslink — 다른 칸의 전체 스캔 범위를 점선으로, 현재 슬라이스를 노란 실선으로 표시'}
+          onClick={() => st().toggleCrosslink()}
+        >
+          <Icon name="crosslink" />
+          <span>Crosslink</span>
+        </button>
+        <button
+          className={`tool ${referenceLines ? 'on' : ''}`}
+          title={'Reference Line — 다른 칸의 현재 슬라이스 한 줄만 표시'}
+          onClick={() => st().toggleReferenceLines()}
+        >
+          <Icon name="refline" />
+          <span>Ref Line</span>
+        </button>
+        <button
           className={`tool ${syncScroll ? 'on' : ''}`}
           title={'동기 스크롤 (Y)\n켜면 모든 칸이 함께 이동합니다.\n끄면 Ctrl(⌘)+클릭으로 함께 선택한 칸끼리만 이동합니다.\n같은 좌표계면 위치(mm) 기준, 아니면 비례로 맞춥니다.'}
           onClick={() => {
@@ -304,4 +324,36 @@ function useClickOutside(ref, fn) {
     document.addEventListener('pointerdown', h);
     return () => document.removeEventListener('pointerdown', h);
   }, [ref, fn]);
+}
+
+/** Cine/다중 Phase 시리즈용 [1][2][3]…[ALL] 버튼 (활성 칸 기준) */
+export function PhaseBar() {
+  const activeIndex = useStore((s) => s.activeIndex);
+  const mode = useStore((s) => s.mode);
+  const activeSeries = useStore((s) => s.series.find((x) => x.key === s.viewportSeries[s.activeIndex]));
+  const phase = useStore((s) => s.phaseByViewport[s.activeIndex] ?? null);
+  const phases = mode === 'stack' && activeSeries ? getPhases(activeSeries) : null;
+  if (!phases || phases.length < 2) return null;
+  return (
+    <div className="phase-bar">
+      <Icon name="phase" size={16} />
+      <span className="muted small">Phase</span>
+      {phases.map((p, i) => (
+        <button
+          key={i}
+          className={`phase-btn ${phase === i ? 'on' : ''}`}
+          title={`Phase ${i + 1} — ${p.length}장만 보기`}
+          onClick={() => useStore.getState().setPhase(activeIndex, i)}
+        >
+          {i + 1}
+        </button>
+      ))}
+      <button className={`phase-btn ${phase === null ? 'on' : ''}`} title="전체 Phase" onClick={() => useStore.getState().setPhase(activeIndex, null)}>
+        ALL
+      </button>
+      <span className="muted small">
+        {phases.length}개 위상 · 위상당 {phases[0].length}장
+      </span>
+    </div>
+  );
 }

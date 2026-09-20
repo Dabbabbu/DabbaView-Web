@@ -22,6 +22,10 @@ export const useStore = create((set, get) => ({
   activeIndex: 0,
   selected: [0], // 함께 스크롤할 칸들 (Ctrl/⌘+클릭으로 추가)
   syncScroll: false, // ON이면 모든 칸이 함께 이동
+  crosslink: false, // 다른 칸의 전체 스캔 범위를 점선으로
+  referenceLines: false, // 다른 칸의 현재 슬라이스만 한 줄로
+  cursor3d: null, // { world, frameOfReferenceUID, viewportId, text, value, modality }
+  phaseByViewport: {}, // 칸별 선택 Phase (null = ALL)
   mprSeriesKey: null,
   activeTool: isTouch ? 'Scroll' : 'WindowLevel',
   showOverlay: true,
@@ -56,6 +60,7 @@ export const useStore = create((set, get) => ({
   },
 
   clearAll() {
+    set({ cursor3d: null, phaseByViewport: {} });
     set({ series: [], viewportSeries: [null, null, null, null], mprSeriesKey: null, mode: 'stack', activeIndex: 0 });
   },
 
@@ -87,6 +92,12 @@ export const useStore = create((set, get) => ({
     set({ selected: next.length ? next : [activeIndex] });
   },
   setSyncScroll: (syncScroll) => set({ syncScroll }),
+  toggleCrosslink: () => set({ crosslink: !get().crosslink, referenceLines: false }),
+  toggleReferenceLines: () => set({ referenceLines: !get().referenceLines, crosslink: false }),
+  setCursor3d: (cursor3d) => set({ cursor3d }),
+  setPhase(index, phase) {
+    set({ phaseByViewport: { ...get().phaseByViewport, [index]: phase } });
+  },
   setActiveTool: (activeTool) => set({ activeTool }),
   setMode: (mode) => set({ mode }),
   openMpr(key) {

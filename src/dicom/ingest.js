@@ -2,6 +2,8 @@ import { loadDicomFiles, makeThumbnail } from './loader';
 import { useStore } from '../store/useStore';
 import { expandZips } from './unzip';
 import { clearGeometryCache } from '../cornerstone/sync';
+import { isVolumeFile, parseVolumeFile } from '../formats/parse';
+import { addVolume } from '../formats/volumeLoader';
 
 /** File[] → 파싱 → 스토어 반영 → 썸네일 생성 (공통 진입점) */
 export async function ingestFiles(files, sourceLabel = '파일') {
@@ -15,10 +17,27 @@ export async function ingestFiles(files, sourceLabel = '파일') {
       showToast(`불러올 파일이 없습니다${zipNote}`, 'error');
       return;
     }
-    setLoading({ label: `${sourceLabel} 읽는 중…`, done: 0, total: files.length });
-    const { series, skipped } = await loadDicomFiles(files, (done, total) =>
+    // NIfTI / NRRD / NumPy 볼륨 파일은 따로 파싱
+    const volumeFiles = files.filter((f) => isVolumeFile(f.name));
+    const dicomFiles = files.filter((f) => !isVolumeFile(f.name));
+    const volumeSeries = [];
+    const volumeErrors = [];
+    for (const f of volumeFiles) {
+      setLoading({ label: `${f.name} 읽는 중…`, done: 0, total: 0 });
+      try {
+        volumeSeries.push(addVolume(await parseVolumeFile(f)));
+      } catch (e) {
+        console.warn(e);
+        volumeErrors.push(e.message || String(e));
+      }
+    }
+
+    setLoading({ label: `${sourceLabel} 읽는 중…`, done: 0, total: dicomFiles.length });
+    const { series: dicomSeries, skipped } = await loadDicomFiles(dicomFiles, (done, total) =>
       setLoading({ label: `${sourceLabel} 읽는 중…`, done, total }),
     );
+    const series = [...dicomSeries, ...volumeSeries];
+    if (volumeErrors.length) showToast(volumeErrors.join(' / '), 'error');
     if (!series.length) {
       showToast(`DICOM 영상을 찾지 못했습니다 (${files.length}개 파일 확인)${zipNote}`, 'error');
       return;

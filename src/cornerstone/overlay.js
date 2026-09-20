@@ -124,6 +124,7 @@ export function buildOverlay(viewport, extra = {}) {
       mrParams2,
       [m.manufacturer, m.model, m.fieldStrength && `${round(m.fieldStrength)}T`].filter(Boolean).join(' '),
     ].filter(Boolean),
+    frameOfReferenceUID: m.frameOfReferenceUID || '',
     bottomRight: [`Zoom: ${zoom}%`, `W: ${ww}  L: ${wl}${extra.invert ? '  INV' : ''}`].filter(Boolean),
     markers: orientationMarkers(viewport),
   };

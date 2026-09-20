@@ -1,4 +1,7 @@
+import { useStore } from '../store/useStore';
+
 export default function ViewportOverlay({ data, label }) {
+  const cursor = useStore((s) => s.cursor3d);
   if (!data) return null;
   const Corner = ({ lines, pos }) => (
     <div className={`ov ov-${pos}`}>
@@ -13,6 +16,12 @@ export default function ViewportOverlay({ data, label }) {
       <Corner lines={data.topLeft} pos="tl" />
       <Corner lines={data.topRight} pos="tr" />
       <Corner lines={data.bottomLeft} pos="bl" />
+      {cursor && cursor.frameOfReferenceUID === data.frameOfReferenceUID && (
+        <div className="ov-cursor">
+          ✛ {cursor.text}
+          {cursor.value !== null && cursor.value !== undefined ? `   ${cursor.modality === 'CT' ? 'HU' : 'SI'} ${Math.round(cursor.value)}` : ''}
+        </div>
+      )}
       <Corner lines={data.bottomRight} pos="br" />
       {data.markers && (
         <>

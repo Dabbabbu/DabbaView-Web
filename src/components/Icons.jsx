@@ -35,6 +35,10 @@ const P = {
   onedrive: 'M7 18h11a4 4 0 0 0 .6-7.9A6 6 0 0 0 7.2 9 4.5 4.5 0 0 0 7 18z',
   close: 'M6 6l12 12M18 6 6 18',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
+  crosslink: 'M3 8h18M3 16h18M8 3v18M16 3v18',
+  refline: 'M3 12h18M7 9v6M17 9v6',
+  cursor3d: 'M12 2v6M12 16v6M2 12h6M16 12h6M12 12h.01M19 5l-3 3M5 19l3-3',
+  phase: 'M4 6h4v12H4zM10 6h4v12h-4zM16 6h4v12h-4z',
   sync: 'M4 9a8 8 0 0 1 13-3l3 3M20 15a8 8 0 0 1-13 3l-3-3M20 6v4h-4M4 18v-4h4',
   fit: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
 };

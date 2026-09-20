@@ -27,6 +27,13 @@
 - DICOM이 아닌 파일, 영상이 없는 객체(SR, PR, DICOMDIR)는 건너뜀
 - 압축 전송 구문(JPEG Baseline/Lossless, JPEG-LS, JPEG 2000, HTJ2K, RLE) 디코딩 — Web Worker + WASM
 
+### 다른 포맷 (DICOM 외)
+- **NIfTI** (`.nii`, `.nii.gz`) — NIfTI-1/2, sform/qform 방향 인식, gzip 자동 해제
+- **NRRD** (`.nrrd`, `.nhdr`) — raw 인코딩, space directions/origin 인식
+- **NumPy** (`.npy`) — 2D/3D 배열 (C 순서). 간격 정보가 없으므로 1 mm로 가정
+- RAS 좌표계(NIfTI 등)는 DICOM LPS로 변환해서 방향 표시·MPR·동기 스크롤이 DICOM과 똑같이 동작합니다
+- 모든 파싱은 브라우저 안에서 File API로 처리합니다
+
 ### 뷰어
 - **W/L**: 우클릭 드래그 (항상), 또는 W/L 도구로 좌클릭
 - **Zoom / Pan**: Ctrl(⌘)+휠, Ctrl+드래그 / 가운데 버튼, Alt+드래그 · 모바일 핀치
@@ -40,6 +47,10 @@
 
 ### Multi View / MPR
 - **1x1, 1x2, 2x2** 레이아웃. 시리즈 패널에서 칸으로 **드래그 앤 드롭**, 또는 칸을 선택하고 시리즈 클릭
+- **Crosslink**: 다른 칸 시리즈의 **전체 스캔 범위를 점선**으로, **현재 슬라이스를 노란 실선**으로 표시 (같은 좌표계일 때)
+- **Reference Line**: 다른 칸의 **현재 슬라이스 한 줄만** 1:1로 표시
+- **3D 커서**: 클릭한 지점의 환자 좌표(**L/P/S**)와 픽셀 값(CT는 HU, 그 외 SI)을 표시하고, 같은 좌표계의 다른 칸은 그 지점이 있는 슬라이스로 이동하며 **초록 커서**로 위치를 표시. 대응되지 않는 칸에는 **"대응 좌표 없음"** 표시
+- **Phase 버튼**: Cine/다중 위상 시리즈에서 `[1][2][3]…[ALL]` 버튼으로 한 위상만 보기 (Temporal Position 태그 또는 위치 반복으로 자동 인식)
 - **동기 스크롤**: 여러 칸을 함께 넘기기 (휠·방향키·시네 모두 반영)
   - **Ctrl(⌘)+칸 클릭**으로 함께 스크롤할 칸을 고르거나, 툴바의 **동기** 버튼(단축키 `Y`)을 켜면 모든 칸이 함께 이동
   - 같은 좌표계(Frame of Reference)의 평행한 시리즈는 **환자 좌표(mm) 기준**으로 가장 가까운 슬라이스를 맞춤 (예: 2 mm 60장 ↔ 5 mm 24장)
@@ -134,6 +145,7 @@ MSAL v5는 팝업 응답을 `auth-redirect.html`(redirect bridge)이 메인 창�
 | F, Esc | 화면 맞춤, 보기 초기화 |
 | W P Z S / L A B E D | W/L, Pan, Zoom, Scroll / 거리, 각도, 사각형, 타원, 자유곡선 |
 | Y | 동기 스크롤 켜기/끄기 |
+| Ctrl(⌘)/Shift + 칸 클릭 | 함께 스크롤할 칸 선택 (개별/범위) |
 | O, T, F2, Tab, ? | 오버레이, 태그, 시리즈 패널, 다음 칸, 도움말 |
 
 ## 버전
@@ -154,7 +166,8 @@ DabbaView-Web/
 ├─ src/
 │  ├─ App.jsx              # 레이아웃, 드래그앤드롭, 단축키
 │  ├─ cornerstone/         # 초기화, 도구 바인딩, 뷰 조작, 오버레이
-│  ├─ dicom/               # 파일 수집·파싱·시리즈 분류, 메타데이터, 태그 사전, 익명화
+│  ├─ dicom/               # 파일 수집·파싱·시리즈 분류, 메타데이터, 태그 사전, 익명화, Phase 분리
+│  ├─ formats/             # NIfTI/NRRD/NumPy 파서와 Cornerstone 이미지 로더
 │  ├─ cloud/               # Google Drive(Picker), OneDrive(MSAL + Graph)
 │  ├─ export/              # PNG/JPEG/GIF 캡처, ZIP
 │  ├─ components/          # 툴바, 시리즈 패널, 뷰포트, MPR, 대화상자
@@ -167,3 +180,6 @@ DabbaView-Web/
 - 파일 전체를 메모리에 올려 표시합니다. 매우 큰 검사(수천 장)는 브라우저 메모리에 따라 느릴 수 있습니다.
 - 익명화는 값 영역을 같은 길이로 덮어쓰는 방식입니다(파일 구조 보존). 픽셀에 새겨진 글자(burned-in annotation)는 지우지 않습니다.
 - MPR은 단일 프레임, 3장 이상, 위치 정보(Image Position/Orientation)가 있는 시리즈에서 동작합니다.
+- Crosslink/Reference Line/3D 커서는 **같은 Frame of Reference**(같은 검사에서 찍은 시리즈)끼리만 대응됩니다. 서로 다른 검사나 NIfTI 등 외부 볼륨은 좌표계가 달라 "대응 좌표 없음"으로 표시됩니다.
+- NRRD는 raw 인코딩만 지원합니다 (gzip으로 압축된 내부 데이터는 미지원, 파일 전체를 gzip한 `.nrrd.gz`는 가능).
+- `.npy`는 픽셀 간격 정보가 없어 1 mm 등방성으로 가정합니다.

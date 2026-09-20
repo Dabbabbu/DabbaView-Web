@@ -22,7 +22,7 @@ import { pickFromGoogleDrive } from './cloud/googleDrive';
 import { isGoogleConfigured, isOneDriveConfigured } from './cloud/config';
 import { isAbort } from './cloud/transfer';
 import { alignToActive } from './cornerstone/sync';
-import { HeaderBar, ToolBar } from './components/Toolbar';
+import { HeaderBar, ToolBar, PhaseBar } from './components/Toolbar';
 import SeriesPanel from './components/SeriesPanel';
 import ViewportGrid from './components/ViewportGrid';
 import MprView from './components/MprView';
@@ -216,6 +216,7 @@ export default function App() {
         onOneDrive={onOneDrive}
       />
       <ToolBar />
+      <PhaseBar />
       <main className="main">
         <SeriesPanel />
         <section className="stage">

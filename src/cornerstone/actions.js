@@ -96,6 +96,9 @@ export function ensureStandardOrientation(vp) {
   return true;
 }
 
+/** 한 번이라도 실제로 그려진 뷰포트 (숨겨진 탭에서는 그려지지 않는다) */
+export const renderedViewports = new Set();
+
 /**
  * 탭이 숨겨진 동안에는 렌더링이 멈춰서 카메라가 초기화되지 않는다(검은 화면·Zoom NaN).
  * 다시 보이게 되면 카메라가 비정상인 뷰포트를 복구하고 다시 그린다.
@@ -106,7 +109,8 @@ export function refreshAfterHidden() {
   for (const vp of engine.getViewports()) {
     const hasImage = vp.getImageIds?.().length || vp.getActors?.().length;
     if (!hasImage) continue;
-    if (!Number.isFinite(vp.getCamera().parallelScale)) {
+    // 아직 한 번도 그려지지 않았으면 카메라가 기본값이므로 영상에 맞춰 다시 잡는다
+    if (!renderedViewports.has(vp.id) || !Number.isFinite(vp.getCamera().parallelScale)) {
       vp.resetCamera();
       ensureStandardOrientation(vp);
     }

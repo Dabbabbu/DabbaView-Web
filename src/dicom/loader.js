@@ -9,6 +9,8 @@ export const instanceMeta = new Map();
 /** imageId → dicomParser dataset url 키 (dataSetCacheManager 키) */
 export const imageIdToUrl = new Map();
 
+import { isVolumeFile } from '../formats/parse';
+
 const SKIP_EXT = /\.(txt|xml|json|html?|pdf|jpe?g|png|gif|bmp|exe|dll|ini|db|ds_store|md|csv)$/i;
 
 // ─────────────────────────── 파일 수집 ───────────────────────────
@@ -63,6 +65,7 @@ function walkEntry(entry, out) {
 
 export function isObviouslyNotDicom(name = '') {
   const base = name.split('/').pop();
+  if (isVolumeFile(base)) return false; // NIfTI/NRRD/NumPy는 따로 처리
   if (base.startsWith('.')) return true;
   if (/^DICOMDIR$/i.test(base)) return true;
   return SKIP_EXT.test(base);
