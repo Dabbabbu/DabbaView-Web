@@ -96,6 +96,24 @@ export function ensureStandardOrientation(vp) {
   return true;
 }
 
+/**
+ * 탭이 숨겨진 동안에는 렌더링이 멈춰서 카메라가 초기화되지 않는다(검은 화면·Zoom NaN).
+ * 다시 보이게 되면 카메라가 비정상인 뷰포트를 복구하고 다시 그린다.
+ */
+export function refreshAfterHidden() {
+  const engine = getEngine();
+  if (!engine) return;
+  for (const vp of engine.getViewports()) {
+    const hasImage = vp.getImageIds?.().length || vp.getActors?.().length;
+    if (!hasImage) continue;
+    if (!Number.isFinite(vp.getCamera().parallelScale)) {
+      vp.resetCamera();
+      ensureStandardOrientation(vp);
+    }
+    vp.render();
+  }
+}
+
 export function resetView() {
   const vp = getActiveViewport();
   if (!vp) return;

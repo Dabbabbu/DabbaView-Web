@@ -66,6 +66,7 @@ export function extractMeta(ds) {
     bodyPart: s('x00180015'),
     // 시리즈
     seriesInstanceUID: s('x0020000e'),
+    frameOfReferenceUID: s('x00200052'),
     seriesNumber: n('x00200011'),
     seriesDescription: s('x0008103e'),
     seriesDate: s('x00080021'),

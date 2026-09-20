@@ -20,6 +20,8 @@ export const useStore = create((set, get) => ({
   layout: '1x1',
   viewportSeries: [null, null, null, null], // 칸별 series key
   activeIndex: 0,
+  selected: [0], // 함께 스크롤할 칸들 (Ctrl/⌘+클릭으로 추가)
+  syncScroll: false, // ON이면 모든 칸이 함께 이동
   mprSeriesKey: null,
   activeTool: isTouch ? 'Scroll' : 'WindowLevel',
   showOverlay: true,
@@ -64,10 +66,27 @@ export const useStore = create((set, get) => ({
   },
 
   setLayout(layout) {
+    set({ selected: [Math.min(get().activeIndex, LAYOUTS[layout].rows * LAYOUTS[layout].cols - 1)] });
     set({ layout, mode: 'stack', activeIndex: Math.min(get().activeIndex, LAYOUTS[layout].rows * LAYOUTS[layout].cols - 1) });
   },
 
-  setActiveIndex: (activeIndex) => set({ activeIndex }),
+  setActiveIndex: (activeIndex) => set({ activeIndex, selected: [activeIndex] }),
+  /** Ctrl/⌘+클릭: 선택에 추가/제외 (활성 칸은 항상 선택에 포함) */
+  toggleSelected(index) {
+    const { selected, activeIndex } = get();
+    const next = selected.includes(index) ? selected.filter((i) => i !== index || i === activeIndex) : [...selected, index];
+    set({ selected: next.length ? next : [activeIndex] });
+  },
+  /** Shift+클릭: 활성 칸부터 이 칸까지 한 번에 선택 (데스크톱과 동일) */
+  selectRange(index) {
+    const { activeIndex, layout } = get();
+    const visible = LAYOUTS[layout].rows * LAYOUTS[layout].cols;
+    const [lo, hi] = activeIndex <= index ? [activeIndex, index] : [index, activeIndex];
+    const next = [];
+    for (let i = lo; i <= hi && i < visible; i++) next.push(i);
+    set({ selected: next.length ? next : [activeIndex] });
+  },
+  setSyncScroll: (syncScroll) => set({ syncScroll }),
   setActiveTool: (activeTool) => set({ activeTool }),
   setMode: (mode) => set({ mode }),
   openMpr(key) {

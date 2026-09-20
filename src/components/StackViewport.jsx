@@ -5,6 +5,7 @@ import { getEngine } from '../cornerstone/init';
 import { getStackGroup } from '../cornerstone/tools';
 import { stackViewportId, ensureStandardOrientation } from '../cornerstone/actions';
 import { buildOverlay } from '../cornerstone/overlay';
+import { propagateScroll } from '../cornerstone/sync';
 import { useStore, getSeries } from '../store/useStore';
 import ViewportOverlay from './ViewportOverlay';
 
@@ -21,6 +22,7 @@ export default function StackViewport({ index }) {
   const [dragOver, setDragOver] = useState(false);
   const seriesKey = useStore((s) => s.viewportSeries[index]);
   const active = useStore((s) => s.activeIndex === index);
+  const selected = useStore((s) => s.selected.includes(index) && s.selected.length > 1);
   const showOverlay = useStore((s) => s.showOverlay);
   const series = useStore((s) => s.series.find((x) => x.key === seriesKey));
   const viewportId = stackViewportId(index);
@@ -47,6 +49,9 @@ export default function StackViewport({ index }) {
       });
     };
     RENDER_EVENTS.forEach((e) => element.addEventListener(e, update));
+    // 슬라이스가 바뀌면 함께 선택한 칸(또는 Sync Scroll ON이면 전체)으로 전파
+    const onNewImage = (e) => propagateScroll(viewportId, e.detail?.imageIdIndex ?? 0);
+    element.addEventListener(Enums.Events.STACK_NEW_IMAGE, onNewImage);
 
     const ro = new ResizeObserver(() => {
       engine.resize(true, true);
@@ -59,6 +64,7 @@ export default function StackViewport({ index }) {
       cancelAnimationFrame(raf);
       ro.disconnect();
       RENDER_EVENTS.forEach((e) => element.removeEventListener(e, update));
+      element.removeEventListener(Enums.Events.STACK_NEW_IMAGE, onNewImage);
       element.removeEventListener('contextmenu', noMenu);
       try {
         toolUtils.cine.stopClip(element);
@@ -120,8 +126,13 @@ export default function StackViewport({ index }) {
 
   return (
     <div
-      className={`viewport-cell ${active ? 'active' : ''} ${dragOver ? 'drag-over' : ''}`}
-      onPointerDown={() => useStore.getState().setActiveIndex(index)}
+      className={`viewport-cell ${active ? 'active' : ''} ${selected ? 'selected' : ''} ${dragOver ? 'drag-over' : ''}`}
+      onPointerDown={(e) => {
+        // Ctrl(⌘)+클릭: 하나씩 추가/제외, Shift+클릭: 활성 칸부터 여기까지
+        if (e.ctrlKey || e.metaKey) useStore.getState().toggleSelected(index);
+        else if (e.shiftKey) useStore.getState().selectRange(index);
+        else useStore.getState().setActiveIndex(index);
+      }}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('application/x-dabbaview-series')) {
           e.preventDefault();

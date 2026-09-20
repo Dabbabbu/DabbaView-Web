@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore, getSeries } from '../store/useStore';
 import { Icon } from './Icons';
 import { APP_TITLE, APP_VERSION } from '../version';
+import { alignToActive } from '../cornerstone/sync';
 import {
   WINDOW_PRESETS,
   applyWindow,
@@ -165,6 +166,8 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive
 export function ToolBar() {
   const activeTool = useStore((s) => s.activeTool);
   const mode = useStore((s) => s.mode);
+  const syncScroll = useStore((s) => s.syncScroll);
+  const selectedCount = useStore((s) => s.selected.length);
   const activeIndex = useStore((s) => s.activeIndex);
   const cine = useStore((s) => s.cine[s.activeIndex]) || { playing: false, fps: 15 };
   const [menu, setMenu] = useState(null);
@@ -262,6 +265,21 @@ export function ToolBar() {
           <input type="range" min="1" max="60" value={cine.fps} onChange={(e) => setFps(+e.target.value)} />
           <span>{cine.fps}fps</span>
         </label>
+      </div>
+      <div className="tsep" />
+      <div className="tgroup">
+        <button
+          className={`tool ${syncScroll ? 'on' : ''}`}
+          title={'동기 스크롤 (Y)\n켜면 모든 칸이 함께 이동합니다.\n끄면 Ctrl(⌘)+클릭으로 함께 선택한 칸끼리만 이동합니다.\n같은 좌표계면 위치(mm) 기준, 아니면 비례로 맞춥니다.'}
+          onClick={() => {
+            const on = !syncScroll;
+            st().setSyncScroll(on);
+            if (on) alignToActive();
+          }}
+        >
+          <Icon name="sync" />
+          <span>{syncScroll ? '동기 ON' : selectedCount > 1 ? `동기 ${selectedCount}칸` : '동기'}</span>
+        </button>
       </div>
       <div className="tsep hide-sm" />
       <div className="tgroup hide-sm">

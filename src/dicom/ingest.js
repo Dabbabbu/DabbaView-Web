@@ -1,6 +1,7 @@
 import { loadDicomFiles, makeThumbnail } from './loader';
 import { useStore } from '../store/useStore';
 import { expandZips } from './unzip';
+import { clearGeometryCache } from '../cornerstone/sync';
 
 /** File[] → 파싱 → 스토어 반영 → 썸네일 생성 (공통 진입점) */
 export async function ingestFiles(files, sourceLabel = '파일') {
@@ -23,6 +24,7 @@ export async function ingestFiles(files, sourceLabel = '파일') {
       return;
     }
     addSeries(series);
+    clearGeometryCache();
     const images = series.reduce((s, x) => s + x.imageIds.length, 0);
     showToast(
       `${series.length}개 시리즈, ${images}장 불러옴${skipped ? ` (DICOM 아님/영상 없음 ${skipped}개 건너뜀)` : ''}${zipNote}`,

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { initCornerstone } from './cornerstone/init';
 import { getStackGroup, getMprGroup, setPrimaryTool } from './cornerstone/tools';
 import {
+  refreshAfterHidden,
   WINDOW_PRESETS,
   applyWindow,
   resetWindow,
@@ -20,6 +21,7 @@ import { ingestFiles } from './dicom/ingest';
 import { pickFromGoogleDrive } from './cloud/googleDrive';
 import { isGoogleConfigured, isOneDriveConfigured } from './cloud/config';
 import { isAbort } from './cloud/transfer';
+import { alignToActive } from './cornerstone/sync';
 import { HeaderBar, ToolBar } from './components/Toolbar';
 import SeriesPanel from './components/SeriesPanel';
 import ViewportGrid from './components/ViewportGrid';
@@ -70,6 +72,18 @@ export default function App() {
     setPrimaryTool(getStackGroup(), tool === 'Crosshairs' ? 'WindowLevel' : tool);
     setPrimaryTool(getMprGroup(), tool);
   }, [ready, activeTool, mode]);
+
+  // 탭을 다시 열었을 때 (숨겨진 동안 렌더링이 멈춰 카메라가 비어 있을 수 있음)
+  useEffect(() => {
+    if (!ready) return undefined;
+    const onVisible = () => document.visibilityState === 'visible' && refreshAfterHidden();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [ready]);
 
   // ── 파일 열기 ──
   const onFiles = (list) => ingestFiles(filesFromInput(list), '파일');
@@ -170,7 +184,11 @@ export default function App() {
       else if (k === 'v' || k === 'V') flip(false);
       else if (k === 'f') fitToWindow();
       else if (k === 'Escape') resetView();
-      else if (k === 'o' || k === 'O') st.toggleOverlay();
+      else if (k === 'y' || k === 'Y') {
+        const on = !st.syncScroll;
+        st.setSyncScroll(on);
+        if (on) alignToActive();
+      } else if (k === 'o' || k === 'O') st.toggleOverlay();
       else if (k === 't' || k === 'T') st.setDialog('tags');
       else if (k === '?') st.setDialog('help');
       else if (k === 'F2') st.toggleSeriesPanel();

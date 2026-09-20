@@ -492,6 +492,14 @@ code {
   outline-offset: -2px;
   z-index: 1;
 }
+.viewport-cell.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.viewport-cell.selected.active {
+  outline-color: var(--select);
+  box-shadow: inset 0 0 0 4px rgba(58, 160, 255, 0.5);
+}
 .viewport-cell.drag-over {
   outline: 2px dashed var(--accent);
 }

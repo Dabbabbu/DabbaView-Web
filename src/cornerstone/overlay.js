@@ -77,7 +77,8 @@ export function buildOverlay(viewport, extra = {}) {
     // 실제 배율: 화면 1px 당 영상 1px = 100%
     const { parallelScale } = viewport.getCamera();
     const spacing = m0.pixelSpacing?.[0] || 1;
-    zoom = Math.round(((spacing * viewport.element.clientHeight) / (2 * parallelScale)) * 100);
+    const z = Math.round(((spacing * viewport.element.clientHeight) / (2 * parallelScale)) * 100);
+    zoom = Number.isFinite(z) ? z : '-';
   } catch {
     /* noop */
   }
