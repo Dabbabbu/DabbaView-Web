@@ -67,9 +67,6 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive
       </div>
 
       <div className="hgroup">
-        <button className="btn" onClick={onFind} title="기능 찾기 (Ctrl/⌘+F) — 한글·영어·비슷한 말로 검색">
-          <Icon name="search" /> <span className="hide-sm">찾기</span>
-        </button>
         <div className="dropdown">
           <button className="btn" onClick={() => setMenu(menu === 'open' ? null : 'open')}>
             <Icon name="open" /> <span className="hide-sm">열기</span>
@@ -114,6 +111,16 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive
       </div>
 
       <div className="spacer" />
+
+      <button
+        className="find-box"
+        onClick={onFind}
+        title={'메뉴 · 도구의 모든 기능을 이름으로 찾아 바로 실행합니다\n한글 · 영어 · 비슷한 말 · 초성 모두 됩니다\n예) 동영상 저장, 내보내기, export, W/L, 익명화, ㄷㅇㅅ'}
+      >
+        <Icon name="search" size={15} />
+        <span className="hide-sm">기능 검색…</span>
+        <kbd className="hide-sm">{/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘F' : 'Ctrl+F'}</kbd>
+      </button>
 
       <div className="hgroup hide-sm">
         <button className="icon-btn" title="DICOM 태그 (T)" onClick={() => st().setDialog('tags')}>
