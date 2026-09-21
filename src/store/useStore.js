@@ -30,6 +30,22 @@ export const useStore = create((set, get) => ({
   activeTool: isTouch ? 'Scroll' : 'WindowLevel',
   showOverlay: true,
   seriesPanelOpen: typeof window !== 'undefined' ? window.innerWidth > 800 : true,
+  dragPads: (() => {
+    try {
+      return localStorage.getItem('dv.dragPads') !== '0';
+    } catch {
+      return true;
+    }
+  })(), // 영상 옆 Zoom · W/L 조절 막대
+  toggleDragPads() {
+    const on = !get().dragPads;
+    try {
+      localStorage.setItem('dv.dragPads', on ? '1' : '0');
+    } catch {
+      /* noop */
+    }
+    set({ dragPads: on });
+  },
   dialog: null, // 'tags' | 'export' | 'anonymize' | 'settings' | 'onedrive' | 'help' | 'about'
   cine: {}, // index → { playing, fps }
 

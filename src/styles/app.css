@@ -1234,3 +1234,44 @@ code {
   border-radius: 4px;
   color: var(--muted);
 }
+
+/* 영상 옆 Zoom · W/L 조절 막대 */
+.drag-pads {
+  width: 58px;
+  flex: 0 0 58px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 5px;
+  background: var(--bg-2);
+  border-left: 1px solid var(--line);
+  box-sizing: border-box;
+  user-select: none;
+}
+.drag-pad {
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  text-align: center;
+  color: var(--text);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  touch-action: none;
+  word-break: break-all;
+}
+.drag-pad:hover {
+  border-color: var(--accent);
+}
+.drag-pad.dragging {
+  background: var(--accent-2);
+  border-color: var(--accent);
+  color: #fff;
+}
+.drag-pad-icon {
+  font-size: 15px;
+}

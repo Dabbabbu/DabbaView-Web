@@ -15,6 +15,7 @@ import {
 import { buildOverlay } from '../cornerstone/overlay';
 import { propagateScroll, notifyViewportChanged, jumpOthersToWorld } from '../cornerstone/sync';
 import ViewportLines from './ViewportLines';
+import { attachTouchGestures } from '../cornerstone/touchGestures';
 import { getPhases } from '../dicom/phases';
 import { valueAtWorld, formatLps } from '../cornerstone/planes';
 import { instanceMeta } from '../dicom/loader';
@@ -122,6 +123,7 @@ export default function StackViewport({ index }) {
       chord = null; // 마지막 버튼: 도구에도 알려 드래그를 끝내게 함
       element.style.cursor = '';
     };
+    const detachTouch = attachTouchGestures(cell, element, () => engine.getViewport(viewportId), index);
     cell.addEventListener('mousedown', onChordDown, true);
     window.addEventListener('mousemove', onChordMove, true);
     window.addEventListener('mouseup', onChordUp, true);
@@ -135,6 +137,7 @@ export default function StackViewport({ index }) {
       element.removeEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
       renderedViewports.delete(viewportId);
       element.removeEventListener('contextmenu', noMenu);
+      detachTouch();
       cell.removeEventListener('mousedown', onChordDown, true);
       window.removeEventListener('mousemove', onChordMove, true);
       window.removeEventListener('mouseup', onChordUp, true);

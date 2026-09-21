@@ -35,6 +35,7 @@ import OneDriveBrowser from './components/OneDriveBrowser';
 import HelpDialog from './components/HelpDialog';
 import AboutDialog from './components/AboutDialog';
 import CommandPalette from './components/CommandPalette';
+import DragPads from './components/DragPads';
 import { buildCommands } from './search/commands';
 import UpdateBanner from './components/UpdateBanner';
 import { APP_TITLE } from './version';
@@ -55,6 +56,7 @@ export default function App() {
   const toast = useStore((s) => s.toast);
   const activeTool = useStore((s) => s.activeTool);
   const panelOpen = useStore((s) => s.seriesPanelOpen);
+  const dragPads = useStore((s) => s.dragPads);
 
   useEffect(() => {
     initCornerstone()
@@ -243,6 +245,7 @@ export default function App() {
           )}
           {ready && hasSeries && (mode === 'mpr' ? <MprView /> : <ViewportGrid />)}
         </section>
+        {ready && hasSeries && dragPads && <DragPads />}
       </main>
 
       <input ref={fileInput} type="file" multiple hidden onChange={(e) => (onFiles(e.target.files), (e.target.value = ''))} />

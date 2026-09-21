@@ -72,9 +72,11 @@ function baseBindings(group, { mpr = false } = {}) {
       { mouseButton: MouseBindings.Wheel, modifierKey: KeyboardBindings.Meta },
     ],
   });
-  // 두 손가락: 손가락 간격 비율로 확대 + 이동
-  group.addTool(PinchZoomTool.toolName);
-  group.setToolActive(PinchZoomTool.toolName, { bindings: [{ numTouchPoints: 2 }] });
+  // 두 손가락: 손가락 간격 비율로 확대 + 이동 (MPR). Stack 칸은 touchGestures.js가 두·세 손가락을 따로 처리
+  if (mpr) {
+    group.addTool(PinchZoomTool.toolName);
+    group.setToolActive(PinchZoomTool.toolName, { bindings: [{ numTouchPoints: 2 }] });
+  }
   group.setToolActive(StackScrollTool.toolName, {
     bindings: [{ mouseButton: MouseBindings.Wheel }],
   });

@@ -136,6 +136,28 @@ export function fitToWindow() {
   vp.render();
 }
 
+/** 활성 칸 W/L을 끌어서 조절 — 좌우 = Width, 위아래 = Level (데스크톱 우클릭 드래그와 같은 감도) → [W, L] */
+export function adjustWindowBy(dx, dy) {
+  const vp = getActiveViewport();
+  const range = vp?.getProperties?.().voiRange;
+  if (!range) return null;
+  const { windowWidth, windowCenter } = utilities.windowLevel.toWindowLevel(range.lower, range.upper);
+  const width = Math.max(1, windowWidth + dx * 4);
+  const center = windowCenter + dy * 4;
+  vp.setProperties({ voiRange: utilities.windowLevel.toLowHighRange(width, center) });
+  vp.render();
+  return [width, center];
+}
+
+/** 확대 → 현재 배율 (1 = 화면 맞춤) */
+export function zoomByDrag(dy) {
+  const vp = getActiveViewport();
+  if (!vp) return null;
+  vp.setZoom(vp.getZoom() * Math.max(0.2, 1 - dy * 0.008));
+  vp.render();
+  return vp.getZoom();
+}
+
 export function zoomBy(factor) {
   const vp = getActiveViewport();
   if (!vp) return;
