@@ -85,6 +85,7 @@ export function extractMeta(ds) {
     sopClassUID: s('x00080016'),
     instanceNumber: n('x00200013'),
     temporalPositionIdentifier: n('x00200100'),
+    triggerTime: f('x00181060'),
     numberOfTemporalPositions: n('x00200105'),
     acquisitionDate: s('x00080022'),
     acquisitionTime: s('x00080032'),

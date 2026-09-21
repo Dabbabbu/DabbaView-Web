@@ -1,3 +1,4 @@
+import { seriesOrder } from '../dicom/loader';
 import { folderLabel } from '../dicom/source';
 import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
@@ -14,12 +15,17 @@ export default function SeriesPanel() {
 
   const studies = useMemo(() => {
     const map = new Map();
-    for (const s of series) {
+    for (const s of [...series].sort(seriesOrder)) {
       const k = s.studyInstanceUID || 'unknown';
       if (!map.has(k)) map.set(k, { key: k, meta: s.meta, series: [] });
       map.get(k).series.push(s);
     }
-    return [...map.values()];
+    // 최신 검사가 위로 (데스크톱과 같음), 검사 안 시리즈는 찍은 순서
+    return [...map.values()].sort(
+      (a, b) =>
+        `${b.meta.studyDate || ''}${b.meta.studyTime || ''}`.localeCompare(`${a.meta.studyDate || ''}${a.meta.studyTime || ''}`) ||
+        a.key.localeCompare(b.key),
+    );
   }, [series]);
 
   const select = (s) => {

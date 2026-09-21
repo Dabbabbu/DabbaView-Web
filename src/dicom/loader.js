@@ -179,30 +179,88 @@ function groupIntoSeries(parsed) {
       });
     });
   }
-  result.sort(
-    (a, b) =>
-      (a.meta.studyDate || '').localeCompare(b.meta.studyDate || '') ||
-      (a.studyInstanceUID || '').localeCompare(b.studyInstanceUID || '') ||
-      (a.seriesNumber ?? 9999) - (b.seriesNumber ?? 9999),
-  );
+  result.sort(seriesOrder);
   return result;
 }
 
-function sortInstances(group) {
-  const m0 = group[0].meta;
-  const iop = m0.imageOrientationPatient;
-  const allPos = group.every((g) => g.meta.imagePositionPatient);
-  if (iop && allPos && group.length > 1) {
-    const n = cross(iop.slice(0, 3), iop.slice(3, 6));
-    const d = (g) => dot(n, g.meta.imagePositionPatient);
-    group.sort((a, b) => (a.meta.instanceNumber ?? 0) - (b.meta.instanceNumber ?? 0) || d(a) - d(b));
-    // 인스턴스 번호가 모두 같거나 없으면 위치 기준
-    const nums = new Set(group.map((g) => g.meta.instanceNumber));
-    if (nums.size < group.length) group.sort((a, b) => d(a) - d(b));
-  } else {
-    group.sort((a, b) => (a.meta.instanceNumber ?? 0) - (b.meta.instanceNumber ?? 0));
+// DICOM TM 'HHMMSS.ffffff' → 비교할 수 있게 자릿수를 맞춘 글자
+const timeText = (v) => {
+  const t = String(v || '').trim().replace(/:/g, '');
+  if (!t) return '';
+  const [whole, frac = ''] = t.split('.');
+  return `${whole.padEnd(6, '0').slice(0, 6)}.${frac.padEnd(6, '0').slice(0, 6)}`;
+};
+const timeOf = (m) =>
+  m.triggerTime != null ? [0, m.triggerTime, ''] : m.temporalPositionIdentifier != null ? [0, m.temporalPositionIdentifier, ''] : timeText(m.acquisitionTime || m.contentTime) ? [1, 0, timeText(m.acquisitionTime || m.contentTime)] : [2, 0, ''];
+const cmp = (a, b) => {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i];
+    const y = b[i];
+    if (x === y) continue;
+    if (typeof x === 'number' && typeof y === 'number') return x - y;
+    return String(x ?? '').localeCompare(String(y ?? ''));
   }
+  return 0;
+};
+
+/**
+ * 시리즈 안 영상 정렬 — 불러올 때마다 늘 같은 순서 (데스크톱 slice_order_keys와 같음)
+ * 1. 시간 시리즈(같은 위치 여러 장 + 시간 태그가 다름) → 위치(찍은 순서) → TriggerTime · TemporalPosition · AcquisitionTime
+ * 2. InstanceNumber가 모두 있으면 → InstanceNumber (찍은 순서)
+ * 3. SliceLocation → 4. 슬라이스 법선 방향 위치 → 5. 시간
+ * 같으면 InstanceNumber → SOPInstanceUID → 파일 이름
+ */
+function sortInstances(group) {
+  const metas = group.map((g) => g.meta);
+  const iop = metas[0].imageOrientationPatient;
+  let proj = null;
+  if (iop?.length === 6 && metas.every((m) => m.imagePositionPatient && m.imageOrientationPatient?.length === 6)) {
+    const n = cross(iop.slice(0, 3), iop.slice(3, 6));
+    const same = metas.every((m) => Math.abs(dot(cross(m.imageOrientationPatient.slice(0, 3), m.imageOrientationPatient.slice(3, 6)), n)) >= 0.99);
+    if (same) proj = metas.map((m) => dot(n, m.imagePositionPatient));
+  }
+  const inst = metas.map((m) => (Number.isFinite(m.instanceNumber) ? m.instanceNumber : null));
+  const times = metas.map(timeOf);
+  const tail = group.map((g, i) => [inst[i] == null ? 1 : 0, inst[i] ?? 0, g.meta.sopInstanceUID || '', g.meta.fileName || '']);
+  let keys = null;
+  if (proj) {
+    const where = proj.map((p) => Math.round(p * 100) / 100);
+    if (new Set(where).size < where.length) {
+      const byPos = new Map();
+      where.forEach((w, i) => byPos.set(w, [...(byPos.get(w) || []), i]));
+      const timed = [...byPos.values()].some((idx) => new Set(idx.map((i) => times[i].join('|'))).size > 1);
+      if (timed) {
+        const firstSeen = (idx) => {
+          const nums = idx.map((i) => inst[i]).filter((v) => v != null);
+          return nums.length ? Math.min(...nums) : Math.min(...idx.map((i) => where[i]));
+        };
+        const ranked = [...byPos.keys()].sort((a, b) => firstSeen(byPos.get(a)) - firstSeen(byPos.get(b)) || a - b);
+        const rank = new Map(ranked.map((w, r) => [w, r]));
+        keys = group.map((_, i) => [0, rank.get(where[i]), ...times[i], ...tail[i]]);
+      }
+    }
+  }
+  if (!keys && inst.every((v) => v != null)) keys = group.map((_, i) => [1, inst[i], ...times[i], ...tail[i]]);
+  const loc = metas.map((m) => (Number.isFinite(m.sliceLocation) ? m.sliceLocation : null));
+  if (!keys && loc.every((v) => v != null)) keys = group.map((_, i) => [2, loc[i], ...times[i], ...tail[i]]);
+  if (!keys && proj) keys = group.map((_, i) => [3, Math.round(proj[i] * 1000) / 1000, ...times[i], ...tail[i]]);
+  if (!keys) keys = group.map((_, i) => [4, 0, ...times[i], ...tail[i]]);
+  const order = group.map((_, i) => i).sort((a, b) => cmp(keys[a], keys[b]));
+  const sorted = order.map((i) => group[i]);
+  group.splice(0, group.length, ...sorted);
 }
+
+/** 시리즈 순서: 검사 날짜 · 시각 → 시리즈를 찍은 때 → 시리즈 번호 → 설명 (데스크톱과 같음) */
+export const seriesDateTime = (s) => {
+  const m = s.meta || {};
+  const date = m.seriesDate || m.acquisitionDate || m.contentDate || m.studyDate || '';
+  return `${date}${timeText(m.seriesTime || m.acquisitionTime || m.contentTime)}`;
+};
+export const seriesOrder = (a, b) =>
+  cmp(
+    [a.meta?.studyDate || '', timeText(a.meta?.studyTime), a.studyInstanceUID || '', seriesDateTime(a), a.seriesNumber ?? 1e9, a.seriesDescription || '', a.key],
+    [b.meta?.studyDate || '', timeText(b.meta?.studyTime), b.studyInstanceUID || '', seriesDateTime(b), b.seriesNumber ?? 1e9, b.seriesDescription || '', b.key],
+  );
 
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
