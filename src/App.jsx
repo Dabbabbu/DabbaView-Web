@@ -233,6 +233,7 @@ export default function App() {
       <PhaseBar />
       <main className="main">
         <SeriesPanel />
+        <div className="stage-col">
         <section className="stage">
           {initError && <div className="fatal">Cornerstone 초기화 실패: {initError}<br />WebGL을 지원하는 최신 브라우저를 사용하세요.</div>}
           {ready && !hasSeries && (
@@ -246,6 +247,7 @@ export default function App() {
           {ready && hasSeries && (mode === 'mpr' ? <MprView /> : <ViewportGrid />)}
         </section>
         {ready && hasSeries && dragPads && <DragPads />}
+        </div>
       </main>
 
       <input ref={fileInput} type="file" multiple hidden onChange={(e) => (onFiles(e.target.files), (e.target.value = ''))} />

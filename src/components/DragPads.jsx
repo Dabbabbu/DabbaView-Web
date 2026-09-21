@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { adjustWindowBy, zoomByDrag, fitToWindow, resetWindow } from '../cornerstone/actions';
 
 /**
- * 영상 옆 조절 막대 (데스크톱 DabbaView와 같음) — 영상을 가리지 않고 끌어서 조절
+ * 영상 아래 Zoom · W/L 조절 칸 (데스크톱 DabbaView 상태바와 같음) — 영상을 가리지 않고 끌어서 조절
  *  🔍 Zoom: 누른 채 위로 = 확대, 아래로 = 축소 · 두 번 클릭 = 화면 맞춤
  *  ◐ W/L: 좌우 = Width, 위아래 = Level · 두 번 클릭 = 기본값
  */
@@ -41,7 +41,7 @@ function Pad({ icon, label, hint, cursor, onDrag, onDouble, title }) {
       onDoubleClick={onDouble}
     >
       <span className="drag-pad-icon">{icon}</span>
-      <span>{value || label}</span>
+      <span className="drag-pad-text">{value || label}</span>
       {!value && <span className="muted">{hint}</span>}
     </div>
   );
@@ -49,7 +49,7 @@ function Pad({ icon, label, hint, cursor, onDrag, onDouble, title }) {
 
 export default function DragPads() {
   return (
-    <aside className="drag-pads hide-sm">
+    <footer className="drag-pads hide-sm" title="영상을 가리지 않는 조절 칸 — 누른 채 끌기">
       <Pad
         icon="🔍"
         label="Zoom"
@@ -74,6 +74,6 @@ export default function DragPads() {
         }}
         onDouble={resetWindow}
       />
-    </aside>
+    </footer>
   );
 }

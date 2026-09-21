@@ -112,7 +112,7 @@ export function buildCommands({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneD
     },
     { label: '오버레이(환자 정보) 표시/숨김', path: '보기', shortcut: 'O', keywords: '오버레이 정보 글자 환자정보 overlay text info 숨기기', run: () => st().toggleOverlay() },
     {
-      label: '영상 옆 Zoom · W/L 조절 막대 보이기/숨기기',
+      label: '영상 아래 Zoom · W/L 조절 칸 보이기/숨기기',
       path: '보기',
       keywords: `확대 축소 줌 zoom ${KW.window} 조절 막대 패드 슬라이더 pad`,
       run: () => st().toggleDragPads(),
