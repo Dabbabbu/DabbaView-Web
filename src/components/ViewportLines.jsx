@@ -7,14 +7,20 @@ import { VIEWPORT_CHANGED } from '../cornerstone/sync';
 // 칸마다 다른 색 (데스크톱 Reference Line과 같은 방식)
 const COLORS = ['#59c3ff', '#ff9f43', '#9d7bff', '#4cd08a'];
 const MAX_COVERAGE_LINES = 28;
+const SCAN_PLAN_COLOR = '#59c3ff'; // Crosslink: 선택한 칸 시리즈의 전체 슬라이스 (지금 슬라이스 노랑과 다른 색)
 
-/** Crosslink(전체 스캔 점선 + 현재 슬라이스 노란 실선), Reference Line(현재 슬라이스만), 3D 커서 */
+/**
+ * Crosslink (PACS 스카우트 방식, 데스크톱과 같음): 선택한 칸에는 선 없음,
+ *   다른 칸 위에 선택한 칸 시리즈의 전체 슬라이스(파란 점선) + 지금 슬라이스(노란 실선)
+ * Reference Line만: 다른 칸들의 지금 슬라이스 한 줄씩 · 3D 커서
+ */
 export default function ViewportLines({ index }) {
   const crosslink = useStore((s) => s.crosslink);
   const referenceLines = useStore((s) => s.referenceLines);
   const cursor3d = useStore((s) => s.cursor3d);
   const viewportSeries = useStore((s) => s.viewportSeries);
   const layout = useStore((s) => s.layout);
+  const activeIndex = useStore((s) => s.activeIndex);
   const [draw, setDraw] = useState(null);
 
   useEffect(() => {
@@ -37,16 +43,17 @@ export default function ViewportLines({ index }) {
         if (!me) return setDraw(null);
 
         const lines = [];
-        if (crosslink || referenceLines) {
+        if ((crosslink || referenceLines) && !(crosslink && index === activeIndex)) {
           for (let j = 0; j < viewportSeries.length; j++) {
             if (j === index || !viewportSeries[j]) continue;
+            if (crosslink && j !== activeIndex) continue; // Crosslink: 선택한 칸의 위치만
             const other = engine.getViewport(stackViewportId(j));
             const ids = other?.getImageIds?.() || [];
             if (!ids.length) continue;
             const current = other.getCurrentImageIdIndex();
             const currentPlane = slicePlaneOf(ids[current]);
             if (!currentPlane || !sameFrame(me, currentPlane)) continue;
-            const color = COLORS[j % COLORS.length];
+            const color = crosslink ? SCAN_PLAN_COLOR : COLORS[j % COLORS.length];
 
             if (crosslink) {
               // 전체 스캔 범위를 점선으로 (너무 많으면 균등하게 솎아냄)
@@ -87,7 +94,7 @@ export default function ViewportLines({ index }) {
       clearTimeout(timer);
       window.removeEventListener(VIEWPORT_CHANGED, handler);
     };
-  }, [index, crosslink, referenceLines, cursor3d, viewportSeries, layout]);
+  }, [index, crosslink, referenceLines, cursor3d, viewportSeries, layout, activeIndex]);
 
   if (!draw) return null;
   const [w, h] = draw.size;

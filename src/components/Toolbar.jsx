@@ -288,7 +288,7 @@ export function ToolBar() {
       <div className="tgroup">
         <button
           className={`tool ${crosslink ? 'on' : ''}`}
-          title={'Crosslink — 다른 칸의 전체 스캔 범위를 점선으로, 현재 슬라이스를 노란 실선으로 표시'}
+          title={'Crosslink (PACS 스카우트) — 선택한 칸 시리즈의 스캔 플래닝을 다른 칸 위에: 전체 슬라이스는 파란 점선, 지금 슬라이스는 노란 실선 (선택한 칸에는 선 없음)'}
           onClick={() => st().toggleCrosslink()}
         >
           <Icon name="crosslink" />
