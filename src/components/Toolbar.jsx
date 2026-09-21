@@ -43,7 +43,7 @@ export function openMprForActive() {
   s.openMpr(key);
 }
 
-export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive, onFind }) {
+export function HeaderBar({ onOpenFiles, onOpenFolder, onAddFiles, onAddFolder, onGoogleDrive, onOneDrive, onFind }) {
   const layout = useStore((s) => s.layout);
   const mode = useStore((s) => s.mode);
   const hasSeries = useStore((s) => s.series.length > 0);
@@ -79,6 +79,16 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive
               <button onClick={onOpenFolder}>
                 <Icon name="folder" /> 폴더 열기…
               </button>
+              {hasSeries && (
+                <>
+                  <button onClick={onAddFiles} title="지금 연 영상은 그대로 두고 고른 파일을 더해 빈 칸에 나란히">
+                    <Icon name="open" /> ➕ 파일 추가…
+                  </button>
+                  <button onClick={onAddFolder} title="지금 연 영상은 그대로 두고 다른 폴더를 더해 빈 칸에 나란히">
+                    <Icon name="folder" /> ➕ 폴더 추가…
+                  </button>
+                </>
+              )}
               <div className="menu-sep" />
               <button onClick={onGoogleDrive}>
                 <Icon name="gdrive" /> Google Drive…

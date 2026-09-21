@@ -100,7 +100,18 @@ export default function App() {
   }, [ready]);
 
   // ── 파일 열기 ──
-  const onFiles = (list) => ingestFiles(filesFromInput(list), '파일');
+  // 열기 = 지금 목록을 바꿈, ➕ 추가 = 지금 목록에 더해 빈 칸에 나란히 (데스크톱과 같음)
+  const addMode = useRef(false);
+  const pick = (input, add) => {
+    addMode.current = add;
+    input.current?.click();
+  };
+  const onFiles = (list) => {
+    const files = filesFromInput(list);
+    if (!files.length) return;
+    if (!addMode.current) useStore.getState().clearAll();
+    ingestFiles(files, addMode.current ? '추가한 파일' : '파일');
+  };
   const onGoogleDrive = async () => {
     const { setLoading, showToast, setDialog } = useStore.getState();
     if (!isGoogleConfigured()) {
@@ -231,8 +242,10 @@ export default function App() {
     <div className={`app ${panelOpen ? 'panel-open' : ''}`}>
       <UpdateBanner />
       <HeaderBar
-        onOpenFiles={() => fileInput.current?.click()}
-        onOpenFolder={() => folderInput.current?.click()}
+        onOpenFiles={() => pick(fileInput, false)}
+        onOpenFolder={() => pick(folderInput, false)}
+        onAddFiles={() => pick(fileInput, true)}
+        onAddFolder={() => pick(folderInput, true)}
         onGoogleDrive={onGoogleDrive}
         onOneDrive={onOneDrive}
         onFind={() => useStore.getState().setDialog('find')}
@@ -246,8 +259,8 @@ export default function App() {
           {initError && <div className="fatal">Cornerstone 초기화 실패: {initError}<br />WebGL을 지원하는 최신 브라우저를 사용하세요.</div>}
           {ready && !hasSeries && (
             <Welcome
-              onOpenFiles={() => fileInput.current?.click()}
-              onOpenFolder={() => folderInput.current?.click()}
+              onOpenFiles={() => pick(fileInput, false)}
+              onOpenFolder={() => pick(folderInput, false)}
               onGoogleDrive={onGoogleDrive}
               onOneDrive={onOneDrive}
             />
@@ -310,8 +323,10 @@ export default function App() {
       {dialog === 'find' && (
         <CommandPalette
           commands={buildCommands({
-            onOpenFiles: () => fileInput.current?.click(),
-            onOpenFolder: () => folderInput.current?.click(),
+            onOpenFiles: () => pick(fileInput, false),
+            onOpenFolder: () => pick(folderInput, false),
+            onAddFiles: () => pick(fileInput, true),
+            onAddFolder: () => pick(folderInput, true),
             onGoogleDrive,
             onOneDrive,
           })}

@@ -51,7 +51,7 @@ const TOOL_WORDS = {
   Cursor3D: '3d커서 3차원 좌표 cursor 3d 위치',
 };
 
-export function buildCommands({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive }) {
+export function buildCommands({ onOpenFiles, onOpenFolder, onAddFiles, onAddFolder, onGoogleDrive, onOneDrive }) {
   const st = useStore.getState;
   const s = st();
   const hasSeries = s.series.length > 0;
@@ -67,6 +67,8 @@ export function buildCommands({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneD
   const list = [
     { label: '파일 열기…', path: '열기', keywords: `${KW.open} 파일 file dicom`, run: onOpenFiles },
     { label: '폴더 열기…', path: '열기', keywords: `${KW.open} 폴더 folder directory`, run: onOpenFolder },
+    { label: '➕ 파일 추가… (지금 연 영상에 더하기)', path: '열기', keywords: '추가 더하기 함께 같이 나란히 비교 add files append 파일', run: onAddFiles, disabled: !hasSeries },
+    { label: '➕ 폴더 추가… (지금 연 영상에 더하기)', path: '열기', keywords: '추가 더하기 함께 같이 나란히 비교 add folder append 폴더', run: onAddFolder, disabled: !hasSeries },
     { label: 'Google Drive…', path: '열기', keywords: `${KW.cloud} ${KW.open} 구글 google gdrive`, run: onGoogleDrive },
     { label: 'OneDrive…', path: '열기', keywords: `${KW.cloud} ${KW.open} 원드라이브 onedrive microsoft ms`, run: onOneDrive },
     { label: '모두 닫기', path: '열기', keywords: '닫기 지우기 비우기 close clear all 초기화', run: () => st().clearAll(), disabled: !hasSeries },
