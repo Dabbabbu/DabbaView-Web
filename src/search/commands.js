@@ -18,6 +18,22 @@ import {
 } from '../cornerstone/actions';
 import { TOOLS, openMprForActive } from '../components/Toolbar';
 import { KW } from './commandSearch';
+import { cacheStats, clearCache } from '../cloud/cache';
+import { formatBytes } from '../cloud/transfer';
+
+// 캐시 지우기: 얼마나 쓰는지 보여 주고 확인
+async function clearCacheCommand() {
+  const { showToast } = useStore.getState();
+  try {
+    const { count, bytes } = await cacheStats();
+    if (!count) return showToast('캐시가 이미 비어 있습니다');
+    if (!window.confirm(`캐시 ${formatBytes(bytes)} (클라우드 파일 ${count}개)를 모두 지울까요?\n지금 열린 영상은 그대로이고, 다음에 같은 클라우드 파일을 열면 다시 내려받습니다.`)) return;
+    await clearCache();
+    showToast(`캐시 ${formatBytes(bytes)}를 지웠습니다`);
+  } catch (e) {
+    showToast(`캐시 지우기 실패: ${e.message || e}`, 'error');
+  }
+}
 
 const TOOL_WORDS = {
   WindowLevel: KW.window,
@@ -69,6 +85,18 @@ export function buildCommands({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneD
     },
     { label: '익명화', path: '헤더', keywords: '익명 개인정보 비식별 anonymize deidentify privacy 환자정보삭제', run: dlg('anonymize'), disabled: !hasSeries },
     { label: '설정', path: '헤더', keywords: `${KW.settings} api 키 key`, run: dlg('settings') },
+    {
+      label: '캐시 지우기 (받아 둔 클라우드 파일 정리)',
+      path: '캐시',
+      keywords: '캐시 cache 지우기 비우기 삭제 정리 임시 임시파일 용량 저장공간 공간 디스크 clear',
+      run: clearCacheCommand,
+    },
+    {
+      label: '캐시 용량 한도 · 사용량 (설정)',
+      path: '캐시',
+      keywords: '캐시 cache 용량 한도 사용량 limit 저장공간 설정',
+      run: dlg('settings'),
+    },
     { label: '도움말 · 단축키', path: '헤더', shortcut: '?', keywords: '도움말 단축키 사용법 매뉴얼 help shortcut manual keyboard', run: dlg('help') },
     { label: '정보 (버전)', path: '헤더', keywords: '정보 버전 about version', run: dlg('about') },
     { label: '시리즈 패널 열기/닫기', path: '헤더', shortcut: 'F2', keywords: '시리즈 목록 패널 series panel list 썸네일', run: () => st().toggleSeriesPanel() },
