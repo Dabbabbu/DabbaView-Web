@@ -1,6 +1,6 @@
 import { loadDicomFiles, makeThumbnail } from './loader';
 import { useStore } from '../store/useStore';
-import { expandZips } from './unzip';
+import { expandArchives } from './archives';
 import { clearGeometryCache } from '../cornerstone/sync';
 import { isVolumeFile, parseVolumeFile } from '../formats/parse';
 import { addVolume } from '../formats/volumeLoader';
@@ -10,7 +10,7 @@ export async function ingestFiles(files, sourceLabel = '파일') {
   const { setLoading, addSeries, setThumbnail, showToast } = useStore.getState();
   if (!files?.length) return;
   try {
-    const expanded = await expandZips(files, (n, name) => setLoading({ label: `ZIP 푸는 중… ${name}`, done: 0, total: 0 }));
+    const expanded = await expandArchives(files, (n, name) => setLoading({ label: `압축 푸는 중… ${name}`, done: 0, total: 0 }));
     files = expanded.files;
     const zipNote = expanded.errors.length ? ` · ${expanded.errors.join(' / ')}` : '';
     if (!files.length) {

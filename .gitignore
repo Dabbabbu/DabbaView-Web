@@ -8,3 +8,4 @@ dist
 *.dcm
 testdata-local
 .claude
+public/libarchive

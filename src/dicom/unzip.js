@@ -34,16 +34,31 @@ export async function unzipFile(file, depth = 0) {
   if (p === 0xffffffff) throw new Error(`${file.name}: ZIP64(4GB 초과)는 지원하지 않습니다`);
 
   const dec = new TextDecoder();
+  let korean = null; // 윈도우에서 만든 ZIP: UTF-8 표시가 없으면 CP949(EUC-KR)로 읽어 봄
+  try {
+    korean = new TextDecoder('euc-kr', { fatal: true });
+  } catch {
+    /* 지원하지 않는 브라우저 */
+  }
   const out = [];
   for (let n = 0; n < count; n++) {
     if (dv.getUint32(p, true) !== SIG_CEN) break;
+    const flags = dv.getUint16(p + 8, true);
     const method = dv.getUint16(p + 10, true);
     const compSize = dv.getUint32(p + 20, true);
     const nameLen = dv.getUint16(p + 28, true);
     const extraLen = dv.getUint16(p + 30, true);
     const commentLen = dv.getUint16(p + 32, true);
     const localOff = dv.getUint32(p + 42, true);
-    const name = dec.decode(buf.subarray(p + 46, p + 46 + nameLen));
+    const rawName = buf.subarray(p + 46, p + 46 + nameLen);
+    let name = dec.decode(rawName);
+    if (!(flags & 0x800) && korean && /[^\x00-\x7f]/.test(name)) {
+      try {
+        name = korean.decode(rawName);
+      } catch {
+        /* 그대로 */
+      }
+    }
     p += 46 + nameLen + extraLen + commentLen;
 
     if (name.endsWith('/') || name.startsWith('__MACOSX/')) continue;
