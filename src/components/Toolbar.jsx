@@ -16,9 +16,10 @@ import {
   clearAnnotations,
   playCine,
   stopCine,
+  selectPhase,
 } from '../cornerstone/actions';
 
-const TOOLS = [
+export const TOOLS = [
   { key: 'WindowLevel', icon: 'wl', label: 'W/L', title: 'Window/Level (우클릭 드래그는 항상 W/L)' },
   { key: 'Pan', icon: 'pan', label: 'Pan', title: 'Pan (가운데 버튼 / Alt+드래그)' },
   { key: 'Zoom', icon: 'zoom', label: 'Zoom', title: 'Zoom (Ctrl+휠 / 핀치)' },
@@ -32,7 +33,17 @@ const TOOLS = [
   { key: 'Cursor3D', icon: 'cursor3d', label: '3D', title: '3D 커서 — 클릭한 지점의 환자 좌표(L/P/S)와 값, 다른 칸에 초록 커서 표시' },
 ];
 
-export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive }) {
+/** 활성 칸의 시리즈(없으면 MPR 가능한 첫 시리즈)를 MPR로 */
+export function openMprForActive() {
+  const s = useStore.getState();
+  const key = s.viewportSeries[s.activeIndex] || s.series.find((x) => x.mprCapable)?.key;
+  const series = getSeries(key);
+  if (!series) return s.showToast('MPR로 볼 시리즈를 먼저 선택하세요', 'error');
+  if (!series.mprCapable) return s.showToast('이 시리즈는 MPR을 지원하지 않습니다 (단일 프레임, 3장 이상, 위치 정보 필요)', 'error');
+  s.openMpr(key);
+}
+
+export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive, onFind }) {
   const layout = useStore((s) => s.layout);
   const mode = useStore((s) => s.mode);
   const hasSeries = useStore((s) => s.series.length > 0);
@@ -41,14 +52,7 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive
   useClickOutside(menuRef, () => setMenu(null));
   const st = useStore.getState;
 
-  const openMpr = () => {
-    const s = st();
-    const key = s.viewportSeries[s.activeIndex] || s.series.find((x) => x.mprCapable)?.key;
-    const series = getSeries(key);
-    if (!series) return s.showToast('MPR로 볼 시리즈를 먼저 선택하세요', 'error');
-    if (!series.mprCapable) return s.showToast('이 시리즈는 MPR을 지원하지 않습니다 (단일 프레임, 3장 이상, 위치 정보 필요)', 'error');
-    s.openMpr(key);
-  };
+  const openMpr = openMprForActive;
 
   return (
     <header className="header" ref={menuRef}>
@@ -63,6 +67,9 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive
       </div>
 
       <div className="hgroup">
+        <button className="btn" onClick={onFind} title="기능 찾기 (Ctrl/⌘+F) — 한글·영어·비슷한 말로 검색">
+          <Icon name="search" /> <span className="hide-sm">찾기</span>
+        </button>
         <div className="dropdown">
           <button className="btn" onClick={() => setMenu(menu === 'open' ? null : 'open')}>
             <Icon name="open" /> <span className="hide-sm">열기</span>
@@ -343,12 +350,12 @@ export function PhaseBar() {
           key={i}
           className={`phase-btn ${phase === i ? 'on' : ''}`}
           title={`Phase ${i + 1} — ${p.length}장만 보기`}
-          onClick={() => useStore.getState().setPhase(activeIndex, i)}
+          onClick={() => selectPhase(activeIndex, i)}
         >
           {i + 1}
         </button>
       ))}
-      <button className={`phase-btn ${phase === null ? 'on' : ''}`} title="전체 Phase" onClick={() => useStore.getState().setPhase(activeIndex, null)}>
+      <button className={`phase-btn ${phase === null ? 'on' : ''}`} title="전체 Phase" onClick={() => selectPhase(activeIndex, null)}>
         ALL
       </button>
       <span className="muted small">

@@ -1,6 +1,7 @@
 // 단순 선형 아이콘 (stroke = currentColor)
 const P = {
   open: 'M3 7h6l2 2h10v10H3z',
+  search: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM15.5 15.5 21 21',
   folder: 'M3 6h6l2 2h10v11H3zM3 10h18',
   wl: 'M12 3a9 9 0 1 0 0 18V3z',
   pan: 'M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3',

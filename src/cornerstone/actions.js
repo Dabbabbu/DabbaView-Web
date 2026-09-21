@@ -1,7 +1,8 @@
 import { utilities, Enums, getRenderingEngine } from '@cornerstonejs/core';
 import { utilities as toolUtils, annotation } from '@cornerstonejs/tools';
 import { RENDERING_ENGINE_ID } from './init';
-import { useStore } from '../store/useStore';
+import { useStore, getSeries } from '../store/useStore';
+import { getPhases, phaseWhere } from '../dicom/phases';
 
 export const WINDOW_PRESETS = [
   { name: 'Brain', center: 40, width: 80, key: '1' },
@@ -146,6 +147,80 @@ export function scrollSlice(delta) {
   const vp = getActiveViewport();
   if (!vp) return;
   utilities.scroll(vp, { delta });
+}
+
+// 위상을 바꿀 때 새 스택에서 시작할 위치 (StackViewport가 한 번 꺼내 씀)
+const pendingStart = new Map();
+export function takePendingStart(viewportId) {
+  const v = pendingStart.get(viewportId);
+  pendingStart.delete(viewportId);
+  return v;
+}
+
+/**
+ * 한 칸 이동 — kind: 'position' (슬라이스 위치, 위상 고정) | 'phase' (같은 위치의 다음 위상)
+ * 위상이 없는 시리즈: position = 한 장, phase = 아무것도 안 함
+ */
+export function stepSlice(kind, dir, index = useStore.getState().activeIndex) {
+  const st = useStore.getState();
+  if (st.mode !== 'stack') {
+    if (kind === 'position') scrollSlice(dir);
+    return;
+  }
+  const vp = getEngine()?.getViewport(stackViewportId(index));
+  const series = getSeries(st.viewportSeries[index]);
+  if (!vp || !series) return;
+  const phases = getPhases(series);
+  const where = phases && phases.length > 1 ? phaseWhere(series, vp.getCurrentImageId()) : null;
+  if (!where) {
+    if (kind === 'position') utilities.scroll(vp, { delta: dir });
+    return;
+  }
+  const [p, i] = where;
+  const fixed = st.phaseByViewport[index] ?? null;
+  if (kind === 'position') {
+    const ids = phases[p];
+    const target = ids[Math.max(0, Math.min(ids.length - 1, i + dir))];
+    const list = fixed === null ? series.imageIds : ids;
+    const at = list.indexOf(target);
+    if (at >= 0 && at !== vp.getCurrentImageIdIndex()) vp.setImageIdIndex(at);
+    return;
+  }
+  const np = (p + dir + phases.length) % phases.length;
+  const target = phases[np][Math.min(i, phases[np].length - 1)];
+  if (fixed === null) {
+    const at = series.imageIds.indexOf(target);
+    if (at >= 0) vp.setImageIdIndex(at);
+  } else {
+    // 위상 하나만 보는 중: 옆 위상 버튼으로 바꾸고 같은 위치에서 시작
+    pendingStart.set(stackViewportId(index), Math.min(i, phases[np].length - 1));
+    st.setPhase(index, np);
+  }
+}
+
+/** 위상 버튼: 지금 보던 슬라이스 위치를 유지한 채 그 위상으로 (null = ALL) */
+export function selectPhase(index, phase) {
+  const st = useStore.getState();
+  const vp = getEngine()?.getViewport(stackViewportId(index));
+  const series = getSeries(st.viewportSeries[index]);
+  const where = vp && series ? phaseWhere(series, vp.getCurrentImageId()) : null;
+  if (where) {
+    const phases = getPhases(series);
+    const [p, i] = where;
+    if (phase === null) {
+      const at = series.imageIds.indexOf(phases[p][i]);
+      if (at >= 0) pendingStart.set(stackViewportId(index), at);
+    } else {
+      pendingStart.set(stackViewportId(index), Math.min(i, phases[phase].length - 1));
+    }
+  }
+  st.setPhase(index, phase);
+}
+
+// 좌+우 버튼 함께 드래그: 천천히 6px마다 한 장, 빠를수록 많이 (최대 12배) — 데스크톱과 같은 값
+export const CHORD_PX_PER_STEP = 6;
+export function chordGain(pxPerMs) {
+  return Math.min(12, 1 + Math.max(0, pxPerMs - 0.25) * 5);
 }
 
 export function clearAnnotations() {

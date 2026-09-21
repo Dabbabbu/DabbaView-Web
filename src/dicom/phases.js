@@ -46,6 +46,22 @@ export function getPhases(series) {
   return phases;
 }
 
+const whereCache = new Map(); // seriesKey → Map(imageId → [phase, position])
+
+/** imageId가 몇 번째 위상의 몇 번째 위치인지 → [phase, position] (위상 시리즈가 아니면 null) */
+export function phaseWhere(series, imageId) {
+  const phases = getPhases(series);
+  if (!phases || !imageId) return null;
+  let map = whereCache.get(series.key);
+  if (!map) {
+    map = new Map();
+    phases.forEach((ids, p) => ids.forEach((id, i) => map.set(id, [p, i])));
+    whereCache.set(series.key, map);
+  }
+  return map.get(imageId) || null;
+}
+
 export function clearPhaseCache() {
   cache.clear();
+  whereCache.clear();
 }

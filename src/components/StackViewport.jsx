@@ -3,7 +3,15 @@ import { Enums } from '@cornerstonejs/core';
 import { utilities as toolUtils } from '@cornerstonejs/tools';
 import { getEngine } from '../cornerstone/init';
 import { getStackGroup } from '../cornerstone/tools';
-import { stackViewportId, ensureStandardOrientation, renderedViewports } from '../cornerstone/actions';
+import {
+  stackViewportId,
+  ensureStandardOrientation,
+  renderedViewports,
+  stepSlice,
+  takePendingStart,
+  chordGain,
+  CHORD_PX_PER_STEP,
+} from '../cornerstone/actions';
 import { buildOverlay } from '../cornerstone/overlay';
 import { propagateScroll, notifyViewportChanged, jumpOthersToWorld } from '../cornerstone/sync';
 import ViewportLines from './ViewportLines';
@@ -72,6 +80,52 @@ export default function StackViewport({ index }) {
     const noMenu = (e) => e.preventDefault();
     element.addEventListener('contextmenu', noMenu);
 
+    // ── 좌+우 버튼을 함께 누르고 끌기: 위아래 = 슬라이스, 좌우 = 위상 (빨리 끌수록 많이) ──
+    // 먼저 누른 버튼의 동작(W/L · 측정)은 그 순간 멈추도록 이벤트를 가로챈다
+    const cell = element.parentElement;
+    let chord = null;
+    const BOTH = 3; // buttons: 1 = 왼쪽, 2 = 오른쪽
+    const onChordDown = (e) => {
+      if ((e.buttons & BOTH) !== BOTH) return;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      chord = { x: e.clientX, y: e.clientY, t: performance.now(), v: 0, h: 0 };
+      useStore.getState().setActiveIndex(index);
+      element.style.cursor = 'ns-resize';
+    };
+    const onChordMove = (e) => {
+      if (!chord) return;
+      e.stopImmediatePropagation();
+      if ((e.buttons & BOTH) === 0) return;
+      const dx = e.clientX - chord.x;
+      const dy = e.clientY - chord.y;
+      const now = performance.now();
+      const dt = Math.max(1, now - chord.t);
+      Object.assign(chord, { x: e.clientX, y: e.clientY, t: now });
+      const horizontal = Math.abs(dx) > Math.abs(dy);
+      const d = horizontal ? dx : dy;
+      if (!d) return;
+      const amount = (d / CHORD_PX_PER_STEP) * chordGain(Math.abs(d) / dt);
+      const key = horizontal ? 'h' : 'v';
+      chord[key] += amount;
+      const steps = Math.trunc(chord[key]);
+      if (!steps) return;
+      chord[key] -= steps;
+      for (let k = 0; k < Math.min(Math.abs(steps), 200); k++) stepSlice(horizontal ? 'phase' : 'position', Math.sign(steps), index);
+    };
+    const onChordUp = (e) => {
+      if (!chord) return;
+      if ((e.buttons & BOTH) !== 0) {
+        e.stopImmediatePropagation(); // 한쪽만 뗌 → 남은 버튼으로 계속
+        return;
+      }
+      chord = null; // 마지막 버튼: 도구에도 알려 드래그를 끝내게 함
+      element.style.cursor = '';
+    };
+    cell.addEventListener('mousedown', onChordDown, true);
+    window.addEventListener('mousemove', onChordMove, true);
+    window.addEventListener('mouseup', onChordUp, true);
+
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
@@ -81,6 +135,9 @@ export default function StackViewport({ index }) {
       element.removeEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
       renderedViewports.delete(viewportId);
       element.removeEventListener('contextmenu', noMenu);
+      cell.removeEventListener('mousedown', onChordDown, true);
+      window.removeEventListener('mousemove', onChordMove, true);
+      window.removeEventListener('mouseup', onChordUp, true);
       try {
         toolUtils.cine.stopClip(element);
       } catch {
@@ -94,11 +151,15 @@ export default function StackViewport({ index }) {
   // 시리즈 표시 (새 파일이 합쳐져 imageIds가 바뀌어도 반영)
   const phase = useStore((s) => s.phaseByViewport[index] ?? null);
   const imageIdsKey = series ? series.imageIds.length : 0;
+  const shownSeries = useRef(null);
   useEffect(() => {
     const engine = getEngine();
     const vp = engine.getViewport(viewportId);
     if (!vp) return;
     const s = getSeries(seriesKey);
+    // 같은 시리즈에서 위상만 바꿈(←→ 등): 확대·이동·W/L은 그대로
+    const sameSeries = !!s && shownSeries.current === seriesKey && renderedViewports.has(viewportId);
+    const keep = sameSeries ? { camera: vp.getCamera(), props: vp.getProperties() } : null;
     try {
       toolUtils.cine.stopClip(vp.element);
     } catch {
@@ -111,8 +172,18 @@ export default function StackViewport({ index }) {
       return;
     }
     const phases = phase !== null ? getPhases(s) : null;
-    vp.setStack(phases?.[phase] || s.imageIds, 0)
+    shownSeries.current = seriesKey;
+    const start = takePendingStart(viewportId) ?? 0;
+    vp.setStack(phases?.[phase] || s.imageIds, start)
       .then(() => {
+        if (keep) {
+          vp.setCamera(keep.camera);
+          vp.setProperties(keep.props);
+          vp.render();
+          renderedViewports.add(viewportId);
+          setOverlay(buildOverlay(vp));
+          return;
+        }
         vp.resetCamera();
         ensureStandardOrientation(vp);
         vp.render();

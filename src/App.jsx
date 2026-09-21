@@ -12,6 +12,7 @@ import {
   resetView,
   fitToWindow,
   scrollSlice,
+  stepSlice,
   playCine,
   stopCine,
 } from './cornerstone/actions';
@@ -33,6 +34,8 @@ import SettingsDialog from './components/SettingsDialog';
 import OneDriveBrowser from './components/OneDriveBrowser';
 import HelpDialog from './components/HelpDialog';
 import AboutDialog from './components/AboutDialog';
+import CommandPalette from './components/CommandPalette';
+import { buildCommands } from './search/commands';
 import UpdateBanner from './components/UpdateBanner';
 import { APP_TITLE } from './version';
 import { Icon } from './components/Icons';
@@ -157,14 +160,22 @@ export default function App() {
   // ── 키보드 단축키 ──
   useEffect(() => {
     const onKey = (e) => {
-      if (e.target.closest?.('input, textarea, select')) return;
       const st = useStore.getState();
+      // Ctrl/⌘+F: 기능 찾기 (브라우저의 페이지 찾기 대신)
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'f' || e.key === 'F' || e.code === 'KeyF')) {
+        e.preventDefault();
+        if (!st.dialog || st.dialog === 'find') st.setDialog('find');
+        return;
+      }
+      if (e.target.closest?.('input, textarea, select')) return;
       if (st.dialog) return;
       const k = e.key;
       const toolKeys = { w: 'WindowLevel', p: 'Pan', z: 'Zoom', s: 'Scroll', l: 'Length', a: 'Angle', b: 'Rectangle', e: 'Ellipse', d: 'Freehand' };
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (k === 'ArrowUp' || k === 'PageUp') scrollSlice(k === 'PageUp' ? -5 : -1);
-      else if (k === 'ArrowDown' || k === 'PageDown') scrollSlice(k === 'PageDown' ? 5 : 1);
+      // ↑↓ 슬라이스 (위상 영상은 위상을 고정한 채 위치), ←→ 위상 (위상 영상만)
+      if (k === 'ArrowUp' || k === 'ArrowDown') stepSlice('position', k === 'ArrowUp' ? -1 : 1);
+      else if (k === 'ArrowLeft' || k === 'ArrowRight') stepSlice('phase', k === 'ArrowLeft' ? -1 : 1);
+      else if (k === 'PageUp' || k === 'PageDown') scrollSlice(k === 'PageUp' ? -5 : 5);
       else if (k === 'Home') scrollSlice(-100000);
       else if (k === 'End') scrollSlice(100000);
       else if (/^[1-9]$/.test(k)) {
@@ -214,6 +225,7 @@ export default function App() {
         onOpenFolder={() => folderInput.current?.click()}
         onGoogleDrive={onGoogleDrive}
         onOneDrive={onOneDrive}
+        onFind={() => useStore.getState().setDialog('find')}
       />
       <ToolBar />
       <PhaseBar />
@@ -282,6 +294,17 @@ export default function App() {
       {dialog === 'onedrive' && <OneDriveBrowser onClose={closeDialog} />}
       {dialog === 'help' && <HelpDialog onClose={closeDialog} />}
       {dialog === 'about' && <AboutDialog onClose={closeDialog} />}
+      {dialog === 'find' && (
+        <CommandPalette
+          commands={buildCommands({
+            onOpenFiles: () => fileInput.current?.click(),
+            onOpenFolder: () => folderInput.current?.click(),
+            onGoogleDrive,
+            onOneDrive,
+          })}
+          onClose={closeDialog}
+        />
+      )}
     </div>
   );
 }

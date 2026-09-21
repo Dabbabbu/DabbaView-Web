@@ -1182,3 +1182,55 @@ code {
 .update-banner button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .update-banner button.ghost { background: transparent; }
 .update-banner a { color: #cfe0ff; margin-left: auto; }
+
+/* 기능 찾기 (Ctrl/⌘+F) */
+.palette-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-sizing: border-box;
+}
+.palette-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.palette-list {
+  margin-top: 8px;
+  max-height: min(55vh, 420px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  padding: 7px 10px;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+.palette-item.on {
+  background: var(--accent-2);
+}
+.palette-item.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.palette-item kbd {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+}
