@@ -1,3 +1,4 @@
+import { folderOf } from './source';
 import { wadouri } from '@cornerstonejs/dicom-image-loader';
 import { utilities } from '@cornerstonejs/core';
 import { extractMeta } from './meta';
@@ -37,6 +38,7 @@ function walkEntry(entry, out) {
     if (entry.isFile) {
       entry.file(
         (f) => {
+          f.dvPath = entry.fullPath.replace(/^\//, ''); // 끌어다 놓은 폴더 안의 경로 (어디서 왔는지 표시)
           out.push(f);
           resolve();
         },
@@ -100,6 +102,7 @@ export async function loadDicomFiles(files, onProgress = () => {}) {
         } else {
           const meta = extractMeta(dataSet);
           meta.fileName = file.name;
+          meta.sourcePath = file.dvPath || file.webkitRelativePath || '';
           meta.fileSize = file.size;
           parsed.push({ imageId, url, meta });
         }
@@ -169,6 +172,7 @@ function groupIntoSeries(parsed) {
         instanceCount: group.length,
         multiframe: group.some((g) => g.meta.numberOfFrames > 1),
         meta: m,
+        sourceFolder: folderOf(m.sourcePath || ''), // 불러온 폴더 (카드 📁 줄)
         thumbnail: null,
         // MPR 가능: 단일프레임 + 3장 이상 + 같은 방향
         mprCapable: !group.some((g) => g.meta.numberOfFrames > 1) && group.length >= 3 && !!m.imagePositionPatient,

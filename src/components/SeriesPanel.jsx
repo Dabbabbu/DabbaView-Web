@@ -1,3 +1,4 @@
+import { folderLabel } from '../dicom/source';
 import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { formatDate } from '../dicom/meta';
@@ -72,6 +73,11 @@ export default function SeriesPanel() {
                     </span>
                   </div>
                   <div className="series-desc">{s.seriesDescription}</div>
+                  {s.sourceFolder && (
+                    <div className="series-src" title={`📁 ${s.sourceFolder}`}>
+                      📁 {folderLabel(s.sourceFolder)}
+                    </div>
+                  )}
                   {s.mprCapable && (
                     <button
                       className="mpr-chip"
@@ -103,6 +109,7 @@ function seriesTooltip(s) {
   const lines = [
     `#${s.seriesNumber ?? '-'} ${s.seriesDescription}`,
     `${s.modality} · ${s.imageIds.length} images`,
+    s.sourceFolder && `📁 ${s.sourceFolder}`,
     m.sequenceName && `Sequence: ${m.sequenceName}`,
     m.repetitionTime !== undefined && `TR ${m.repetitionTime} / TE ${m.echoTime}${m.inversionTime ? ` / TI ${m.inversionTime}` : ''}`,
     m.flipAngle !== undefined && `FA ${m.flipAngle}°`,

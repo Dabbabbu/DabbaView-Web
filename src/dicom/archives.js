@@ -48,7 +48,9 @@ function untar(bytes) {
     } else {
       if ((type === '0' || type === '\0' || type === '7') && !junk(longName || name)) {
         const full = longName || name;
-        out.push(new File([bytes.slice(dataStart, dataStart + size)], full.split('/').pop(), { type: 'application/octet-stream' }));
+        const f = new File([bytes.slice(dataStart, dataStart + size)], full.split('/').pop(), { type: 'application/octet-stream' });
+        f.dvPath = full;
+        out.push(f);
       }
       longName = null;
     }
@@ -79,7 +81,10 @@ async function viaLibarchive(file) {
     const walk = (node, path) => {
       for (const [key, value] of Object.entries(node)) {
         if (value instanceof File) {
-          if (!junk(path + key)) out.push(value);
+          if (!junk(path + key)) {
+            value.dvPath = path + key;
+            out.push(value);
+          }
         } else if (value && typeof value === 'object') walk(value, `${path}${key}/`);
       }
     };
@@ -112,9 +117,13 @@ export async function extractArchive(file, depth = 0) {
     // 사실은 TAR를 gz로 누른 것일 수도 있음 (ustar 표시 확인)
     const isTar = bytes.length > 262 && new TextDecoder().decode(bytes.subarray(257, 262)) === 'ustar';
     files = isTar ? untar(bytes) : [new File([bytes], file.name.replace(/\.gz$/i, ''), { type: 'application/octet-stream' })];
+    if (!isTar) files[0].dvPath = files[0].name;
   } else {
     files = await viaLibarchive(file);
   }
+  // 어디서 왔는지: '<압축파일이 있던 폴더>/<압축파일>/<안쪽 경로>'
+  const base = (file.dvPath || file.webkitRelativePath || file.name).replace(/[^/]*$/, '') + file.name;
+  for (const f of files) f.dvPath = `${base}/${f.dvPath || f.name}`;
   // 압축 안의 압축
   const out = [];
   for (const f of files) {

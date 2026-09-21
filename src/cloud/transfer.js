@@ -42,7 +42,7 @@ export const wantFile = (name) => !isObviouslyNotDicom(name);
  * @param onProgress ({ folders, files, skipped, bytes }) 탐색 중 누적 수치
  */
 export async function crawl(roots, list, { signal, onProgress = () => {} } = {}) {
-  const queue = roots.map((f) => ({ folder: f, depth: 0 }));
+  const queue = roots.map((f) => ({ folder: f, depth: 0, path: (typeof f === 'object' && f.name) || '' }));
   const files = [];
   const stats = { folders: 0, files: 0, skipped: 0, bytes: 0 };
   let active = 0;
@@ -53,14 +53,16 @@ export async function crawl(roots, list, { signal, onProgress = () => {} } = {})
       if (error) return;
       if (!queue.length && !active) return resolve();
       while (active < LIST_CONCURRENCY && queue.length) {
-        const { folder, depth } = queue.shift();
+        const { folder, depth, path } = queue.shift();
         active++;
         list(folder)
           .then(({ folders, files: found }) => {
             throwIfAborted(signal);
             stats.folders++;
-            if (depth < MAX_DEPTH) folders.forEach((f) => queue.push({ folder: f, depth: depth + 1 }));
+            const sub = (f) => [path, typeof f === 'object' ? f.name : ''].filter(Boolean).join('/');
+            if (depth < MAX_DEPTH) folders.forEach((f) => queue.push({ folder: f, depth: depth + 1, path: sub(f) }));
             for (const f of found) {
+              f.dvPath = [path, f.name].filter(Boolean).join('/'); // 클라우드 폴더 경로 (어디서 왔는지 표시)
               if (wantFile(f.name)) {
                 files.push(f);
                 stats.files++;
@@ -131,6 +133,7 @@ export async function downloadAll(files, request, { signal, onProgress = () => {
         const hit = key ? await cacheGet(key) : null;
         if (hit) {
           out[i] = new File([hit], f.name || f.id, { type: 'application/octet-stream' });
+          if (f.dvPath) out[i].dvPath = f.dvPath;
           bytes += hit.size;
           cached++;
           done++;
@@ -158,6 +161,7 @@ export async function downloadAll(files, request, { signal, onProgress = () => {
           bytes += got;
         }
         out[i] = new File([blob], f.name || f.id, { type: 'application/octet-stream' });
+        if (f.dvPath) out[i].dvPath = f.dvPath;
         if (key) cachePut(key, blob, { name: f.name, source, replacePrefix: cachePrefix?.(f) }); // 기다리지 않음
       } catch (e) {
         if (isAbort(e) || signal?.aborted) throw abortError();

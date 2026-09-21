@@ -5,6 +5,7 @@
 import { useStore, getSeries, LAYOUTS } from '../store/useStore';
 import { instanceMeta } from '../dicom/loader';
 import { getEngine, stackViewportId } from './actions';
+import { sameFrame } from './planes';
 
 export const VIEWPORT_CHANGED = 'dv-viewport-changed';
 
@@ -32,7 +33,7 @@ export function seriesGeometry(series) {
       return ipp ? dot(normal, ipp) : null;
     });
     if (projections.every((p) => p !== null)) {
-      geom = { frameOfReferenceUID: first.frameOfReferenceUID || '', normal, projections };
+      geom = { frameOfReferenceUID: first.frameOfReferenceUID || '', studyInstanceUID: first.studyInstanceUID || '', normal, projections };
     }
   }
   geomCache.set(series.key, geom);
@@ -45,7 +46,7 @@ export function clearGeometryCache() {
 
 /** 같은 좌표계 + 평행(법선이 나란함)이면 mm 기준으로 연동 가능 */
 function canLinkByPosition(a, b) {
-  if (!a || !b || !a.frameOfReferenceUID || a.frameOfReferenceUID !== b.frameOfReferenceUID) return false;
+  if (!sameFrame(a, b)) return false; // 연동 기준(좌표계 · 같은 검사 · 환자 좌표)
   return Math.abs(dot(a.normal, b.normal)) > 0.95;
 }
 
@@ -126,7 +127,7 @@ export function propagateScroll(sourceViewportId, sourceIndex) {
  * 3D 커서: 같은 좌표계의 다른 칸을 그 점이 있는 슬라이스로 이동시킨다.
  * @returns 이동/대응된 칸 수
  */
-export function jumpOthersToWorld(world, frameOfReferenceUID, exceptViewportId) {
+export function jumpOthersToWorld(world, frameOfReferenceUID, exceptViewportId, studyInstanceUID = '') {
   const { viewportSeries, layout } = useStore.getState();
   const engine = getEngine();
   if (!engine) return 0;
@@ -138,7 +139,7 @@ export function jumpOthersToWorld(world, frameOfReferenceUID, exceptViewportId) 
     const vp = engine.getViewport(viewportId);
     if (!vp?.getImageIds?.().length) continue;
     const geom = seriesGeometry(getSeries(viewportSeries[i]));
-    if (!geom || geom.frameOfReferenceUID !== frameOfReferenceUID) continue;
+    if (!geom || !sameFrame(geom, { frameOfReferenceUID, studyInstanceUID })) continue;
     const value = geom.normal[0] * world[0] + geom.normal[1] * world[1] + geom.normal[2] * world[2];
     const index = nearestIndex(geom.projections, value);
     matched++;

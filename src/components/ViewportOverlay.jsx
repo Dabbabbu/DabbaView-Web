@@ -1,4 +1,5 @@
 import { useStore } from '../store/useStore';
+import { sameFrame } from '../cornerstone/planes';
 
 export default function ViewportOverlay({ data, label }) {
   const cursor = useStore((s) => s.cursor3d);
@@ -15,8 +16,8 @@ export default function ViewportOverlay({ data, label }) {
       {label && <div className="ov-plane">{label}</div>}
       <Corner lines={data.topLeft} pos="tl" />
       <Corner lines={data.topRight} pos="tr" />
-      <Corner lines={data.bottomLeft} pos="bl" />
-      {cursor && cursor.frameOfReferenceUID === data.frameOfReferenceUID && (
+      <Corner lines={data.fileName ? [...data.bottomLeft, `📄 ${data.fileName}`] : data.bottomLeft} pos="bl" />
+      {cursor && sameFrame(cursor, data) && (
         <div className="ov-cursor">
           ✛ {cursor.text}
           {cursor.value !== null && cursor.value !== undefined ? `   ${cursor.modality === 'CT' ? 'HU' : 'SI'} ${Math.round(cursor.value)}` : ''}

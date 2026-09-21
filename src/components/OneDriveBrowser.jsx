@@ -11,6 +11,8 @@ export default function OneDriveBrowser({ onClose }) {
   const [token, setToken] = useState(null);
   const [path, setPath] = useState([{ id: null, name: 'OneDrive' }]);
   const [items, setItems] = useState([]);
+  const [reloadTick, setReloadTick] = useState(0); // 🔄 새로 고침
+  const [prevIds, setPrevIds] = useState(null); // 새로 고침 전 목록 → 새로 생긴 항목 표시
   const [selected, setSelected] = useState(new Map());
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -40,17 +42,27 @@ export default function OneDriveBrowser({ onClose }) {
     setBusy('불러오는 중…');
     setError('');
     listChildren(token, cur.id, cur.driveId)
-      .then((list) => alive && setItems(list))
+      .then((list) => {
+        if (!alive) return;
+        setItems(list);
+      })
       .catch((e) => alive && setError(e.message))
       .finally(() => alive && setBusy(''));
     return () => {
       alive = false;
     };
-  }, [token, cur]);
+  }, [token, cur, reloadTick]);
+  const reload = () => {
+    setPrevIds(new Set(items.map((i) => i.id)));
+    setReloadTick((n) => n + 1);
+  };
+  const isNew = (it) => prevIds && !prevIds.has(it.id);
+  const newCount = prevIds ? items.filter((i) => !prevIds.has(i.id)).length : 0;
 
   const open = (it) => {
     const target = it.remoteItem || it;
     setSelected(new Map());
+    setPrevIds(null);
     setPath([...path, { id: target.id, name: it.name, driveId: target.parentReference?.driveId }]);
   };
 
@@ -104,19 +116,24 @@ export default function OneDriveBrowser({ onClose }) {
       <p className="muted small">폴더를 선택하거나 "이 폴더 전체 열기"를 누르면 하위 폴더의 DICOM(ZIP 포함)을 모두 받아서 엽니다.</p>
       <div className="crumbs">
         {path.map((p, i) => (
-          <button key={i} className="crumb" onClick={() => setPath(path.slice(0, i + 1))}>
+          <button key={i} className="crumb" onClick={() => (setPrevIds(null), setPath(path.slice(0, i + 1)))}>
             {p.name}
           </button>
         ))}
         {busy && <span className="muted"> {busy}</span>}
+        <button className="btn sm" style={{ marginLeft: 'auto' }} onClick={reload} disabled={!!busy} title="그사이 OneDrive에 추가 · 삭제된 파일 반영">
+          🔄 새로 고침
+        </button>
       </div>
+      {prevIds && !busy && <p className="muted small">🔄 새로 고침 — {newCount ? `새 항목 ${newCount}개 (🆕)` : '새 항목 없음'}</p>}
       <div className="file-list">
         {items.map((it) => {
           return (
             <div key={it.id} className={`file-row ${selected.has(it.id) ? 'sel' : ''}`}>
               <input type="checkbox" checked={selected.has(it.id)} onChange={() => toggle(it)} />
               <button className="file-name" onClick={() => (isFolder(it) ? open(it) : toggle(it))}>
-                <Icon name={isFolder(it) ? 'folder' : 'open'} size={16} /> {it.name}
+                <Icon name={isFolder(it) ? 'folder' : 'open'} size={16} /> {isNew(it) ? '🆕 ' : ''}
+                {it.name}
               </button>
               <span className="muted small">{isFolder(it) ? `${(it.folder || it.remoteItem.folder).childCount ?? ''} 항목` : fmtSize(it.size)}</span>
             </div>

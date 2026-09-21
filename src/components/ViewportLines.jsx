@@ -67,7 +67,7 @@ export default function ViewportLines({ index }) {
         // 3D 커서
         let cursor = null;
         if (cursor3d) {
-          const inFrame = sameFrame(me, { frameOfReferenceUID: cursor3d.frameOfReferenceUID });
+          const inFrame = sameFrame(me, { frameOfReferenceUID: cursor3d.frameOfReferenceUID, studyInstanceUID: cursor3d.studyInstanceUID });
           if (inFrame) {
             const pt = vp.worldToCanvas(cursor3d.world);
             if (pt && Number.isFinite(pt[0])) cursor = { pt, own: cursor3d.viewportId === viewportId };

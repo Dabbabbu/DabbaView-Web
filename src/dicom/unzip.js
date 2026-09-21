@@ -73,6 +73,7 @@ export async function unzipFile(file, depth = 0) {
 
     const base = name.split('/').pop();
     const inner = new File([bytes], base, { type: 'application/octet-stream' });
+    inner.dvPath = name; // 압축 안의 경로 (어디서 왔는지 표시)
     if (depth < MAX_DEPTH && isZipName(base)) out.push(...(await unzipFile(inner, depth + 1)));
     else out.push(inner);
   }

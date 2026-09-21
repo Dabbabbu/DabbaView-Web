@@ -16,7 +16,8 @@ import {
   playCine,
   stopCine,
 } from './cornerstone/actions';
-import { useStore, LAYOUTS } from './store/useStore';
+import { useStore, LAYOUTS, getSeries } from './store/useStore';
+import { folderLabel } from './dicom/source';
 import { filesFromDataTransfer, filesFromInput } from './dicom/loader';
 import { ingestFiles } from './dicom/ingest';
 import { pickFromGoogleDrive } from './cloud/googleDrive';
@@ -57,6 +58,13 @@ export default function App() {
   const activeTool = useStore((s) => s.activeTool);
   const panelOpen = useStore((s) => s.seriesPanelOpen);
   const dragPads = useStore((s) => s.dragPads);
+  const activeKey = useStore((s) => s.viewportSeries[s.activeIndex]);
+
+  // 탭 제목에 지금 보는 시리즈의 폴더 이름 (어디서 왔는지)
+  useEffect(() => {
+    const folder = folderLabel(getSeries(activeKey)?.sourceFolder || '');
+    document.title = folder ? `${folder} — DabbaView Web` : 'DabbaView Web';
+  }, [activeKey]);
 
   useEffect(() => {
     initCornerstone()

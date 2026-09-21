@@ -62,13 +62,24 @@ export const useStore = create((set, get) => ({
     });
     const series = [...existing.values()];
     const vs = [...get().viewportSeries];
+    // 이미 연 영상이 있는데 빈 칸이 없으면 격자를 한 단계 키워 새 시리즈를 나란히 (데스크톱 Add Folder와 같음)
+    let layout = get().layout;
+    const fresh = newSeries.filter((s) => !get().series.some((x) => x.key === s.key));
+    if (get().series.length && fresh.length && get().mode === 'stack') {
+      const order = ['1x1', '1x2', '2x2'];
+      while (order.indexOf(layout) >= 0 && order.indexOf(layout) < order.length - 1) {
+        const { rows: r, cols: c } = LAYOUTS[layout];
+        if (vs.slice(0, r * c).some((k) => !k)) break;
+        layout = order[order.indexOf(layout) + 1];
+      }
+    }
     // 빈 칸에 자동 배치
-    const { rows, cols } = LAYOUTS[get().layout];
+    const { rows, cols } = LAYOUTS[layout];
     let si = 0;
     for (let i = 0; i < rows * cols && si < newSeries.length; i++) {
       if (!vs[i]) vs[i] = newSeries[si++].key;
     }
-    set({ series, viewportSeries: vs });
+    set({ series, viewportSeries: vs, layout });
   },
 
   setThumbnail(key, thumbnail) {

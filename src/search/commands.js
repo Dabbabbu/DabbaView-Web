@@ -19,6 +19,8 @@ import {
 import { TOOLS, openMprForActive } from '../components/Toolbar';
 import { KW } from './commandSearch';
 import { cacheStats, clearCache } from '../cloud/cache';
+import { LINK_MODES, getLinkMode, setLinkMode } from '../cornerstone/planes';
+import { notifyViewportChanged } from '../cornerstone/sync';
 import { formatBytes } from '../cloud/transfer';
 
 // 캐시 지우기: 얼마나 쓰는지 보여 주고 확인
@@ -126,6 +128,16 @@ export function buildCommands({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneD
     { label: '이전 위상', path: '위상', shortcut: '←', keywords: '위상 페이즈 phase previous 심장 cine', run: () => stepSlice('phase', -1) },
     { label: '전체 위상 보기 (ALL)', path: '위상', keywords: '위상 페이즈 phase all 전체', run: () => selectPhase(st().activeIndex, null) },
     { label: 'Crosslink', path: '동기', keywords: '크로스링크 스캔범위 교차선 crosslink scout 위치선', run: () => st().toggleCrosslink() },
+    ...Object.entries(LINK_MODES).map(([key, text]) => ({
+      label: `연동 기준: ${text}${getLinkMode() === key ? '  ✓' : ''}`,
+      path: 'Crosslink',
+      keywords: '연동 기준 크로스링크 crosslink reference line 위치선 스캔 플래닝 planning 좌표계 frame study 같은 검사 다른 폴더',
+      run: () => {
+        setLinkMode(key);
+        notifyViewportChanged();
+        st().showToast(`연동 기준: ${text}`);
+      },
+    })),
     { label: 'Reference Line', path: '동기', keywords: '기준선 참조선 reference line ref', run: () => st().toggleReferenceLines() },
     {
       label: '동기 스크롤 켜기/끄기',

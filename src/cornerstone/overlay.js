@@ -125,6 +125,8 @@ export function buildOverlay(viewport, extra = {}) {
       [m.manufacturer, m.model, m.fieldStrength && `${round(m.fieldStrength)}T`].filter(Boolean).join(' '),
     ].filter(Boolean),
     frameOfReferenceUID: m.frameOfReferenceUID || '',
+    studyInstanceUID: m.studyInstanceUID || '',
+    fileName: m.fileName || '', // 지금 슬라이스의 파일 이름 (어디서 왔는지)
     bottomRight: [`Zoom: ${zoom}%`, `W: ${ww}  L: ${wl}${extra.invert ? '  INV' : ''}`].filter(Boolean),
     markers: orientationMarkers(viewport),
   };

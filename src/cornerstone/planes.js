@@ -15,7 +15,7 @@ export function viewportPlane(viewport) {
     if (!viewPlaneNormal || !focalPoint) return null;
     const imageId = viewport.getCurrentImageId?.();
     const meta = imageId ? instanceMeta.get(imageId) : null;
-    return { normal: viewPlaneNormal, point: focalPoint, frameOfReferenceUID: meta?.frameOfReferenceUID || '' };
+    return { normal: viewPlaneNormal, point: focalPoint, frameOfReferenceUID: meta?.frameOfReferenceUID || '', studyInstanceUID: meta?.studyInstanceUID || '' };
   } catch {
     return null;
   }
@@ -53,10 +53,41 @@ export function slicePlaneOf(imageId) {
     m.imagePositionPatient,
     add(mul(iop.slice(0, 3), ((m.columns || 1) - 1) * 0.5 * spacing[1]), mul(iop.slice(3, 6), ((m.rows || 1) - 1) * 0.5 * spacing[0])),
   );
-  return { normal, point: m.imagePositionPatient, center, frameOfReferenceUID: m.frameOfReferenceUID || '' };
+  return { normal, point: m.imagePositionPatient, center, frameOfReferenceUID: m.frameOfReferenceUID || '', studyInstanceUID: m.studyInstanceUID || '' };
 }
 
-export const sameFrame = (a, b) => !!a?.frameOfReferenceUID && a.frameOfReferenceUID === b?.frameOfReferenceUID;
+// Crosslink · Ref Line · 3D 커서 연동 기준 (데스크톱 View ▸ 연동 기준과 같음, 이 브라우저에 기억)
+export const LINK_MODES = {
+  frame: '좌표계(Frame of Reference)가 같을 때만 (기본)',
+  study: '같은 검사(Study)면 — 좌표계 표시가 없거나 달라도',
+  position: '환자 좌표만 보고 항상 — 다른 날 검사도 (위치가 어긋날 수 있음)',
+};
+let linkMode = (() => {
+  try {
+    const v = localStorage.getItem('dv.linkMode');
+    return LINK_MODES[v] ? v : 'frame';
+  } catch {
+    return 'frame';
+  }
+})();
+export const getLinkMode = () => linkMode;
+export function setLinkMode(mode) {
+  if (!LINK_MODES[mode]) return;
+  linkMode = mode;
+  try {
+    localStorage.setItem('dv.linkMode', mode);
+  } catch {
+    /* noop */
+  }
+}
+
+/** 두 평면(또는 시리즈)을 같은 공간으로 보고 위치를 맞춰도 되는지 */
+export function sameFrame(a, b) {
+  if (!a || !b) return false;
+  if (a.frameOfReferenceUID && a.frameOfReferenceUID === b.frameOfReferenceUID) return true;
+  if (linkMode === 'study') return !!a.studyInstanceUID && a.studyInstanceUID === b.studyInstanceUID;
+  return linkMode === 'position';
+}
 
 /** 화면 좌표 → 환자 좌표(LPS)와 픽셀 값 */
 export function probeAt(viewport, canvasPoint) {

@@ -70,7 +70,7 @@ async function listFolder(folderId, token, signal) {
     for (const f of json.files || []) {
       // 폴더 바로가기(shortcut)는 대상 폴더로 따라감
       const target = f.mimeType === SHORTCUT_MIME ? f.shortcutDetails : null;
-      if (f.mimeType === FOLDER_MIME || target?.targetMimeType === FOLDER_MIME) folders.push(target ? target.targetId : f.id);
+      if (f.mimeType === FOLDER_MIME || target?.targetMimeType === FOLDER_MIME) folders.push({ id: target ? target.targetId : f.id, name: f.name });
       else if (!f.mimeType.startsWith('application/vnd.google-apps')) files.push(fileRef(f));
     }
     pageToken = json.nextPageToken || '';
@@ -90,7 +90,7 @@ export async function pickFromGoogleDrive(onStatus = () => {}, signal) {
   const picked = await showPicker(cfg, token);
   if (!picked.length) return [];
 
-  const rootFolders = picked.filter((d) => d.mimeType === FOLDER_MIME).map((d) => d.id);
+  const rootFolders = picked.filter((d) => d.mimeType === FOLDER_MIME).map((d) => ({ id: d.id, name: d.name }));
   // 직접 고른 파일은 캐시 키에 쓸 내용 버전(md5)을 위해 메타데이터를 한 번 조회
   const direct = await Promise.all(
     picked
@@ -99,7 +99,7 @@ export async function pickFromGoogleDrive(onStatus = () => {}, signal) {
   );
 
   onStatus(crawlStatus('Google Drive', { folders: 0, files: direct.length, skipped: 0, bytes: 0 }));
-  const { files: found } = await crawl(rootFolders, (id) => listFolder(id, token, signal), {
+  const { files: found } = await crawl(rootFolders, (folder) => listFolder(folder.id ?? folder, token, signal), {
     signal,
     onProgress: (s) => onStatus(crawlStatus('Google Drive', { ...s, files: s.files + direct.length })),
   });

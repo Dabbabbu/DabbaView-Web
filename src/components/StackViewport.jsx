@@ -232,12 +232,13 @@ export default function StackViewport({ index }) {
             st.setCursor3d({
               world,
               frameOfReferenceUID: meta.frameOfReferenceUID || '',
+              studyInstanceUID: meta.studyInstanceUID || '',
               viewportId,
               text: formatLps(world),
               value: valueAtWorld(vp, world),
               modality: meta.modality || '',
             });
-            const matched = jumpOthersToWorld(world, meta.frameOfReferenceUID || '', viewportId);
+            const matched = jumpOthersToWorld(world, meta.frameOfReferenceUID || '', viewportId, meta.studyInstanceUID || '');
             notifyViewportChanged();
             if (!matched && st.viewportSeries.filter(Boolean).length > 1) st.showToast('다른 칸에 대응되는 좌표가 없습니다');
             return;
