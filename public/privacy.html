@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b0d10" />
+    <title>DabbaView 개인정보처리방침 / Privacy Policy</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0 auto; padding: 24px 18px 64px; max-width: 760px; background: #0b0d10; color: #e6e6e6;
+             font: 15px/1.7 -apple-system, "Noto Sans KR", "Segoe UI", sans-serif; }
+      h1 { font-size: 22px; margin: 8px 0 4px; }
+      h2 { font-size: 17px; margin: 28px 0 8px; color: #8fc7ff; }
+      h3 { font-size: 15px; margin: 18px 0 6px; }
+      p, li { color: #d5d9de; }
+      code { background: #1a1e24; padding: 1px 5px; border-radius: 4px; }
+      .muted { color: #9aa7b5; font-size: 13px; }
+      hr { border: 0; border-top: 1px solid #222; margin: 36px 0; }
+      a { color: #7fb8ff; }
+    </style>
+  </head>
+  <body>
+    <h1>DabbaView 개인정보처리방침</h1>
+    <p class="muted">마지막 업데이트: 2026-09-23 · 적용 대상: DabbaView Web (https://dabbabbu.github.io/DabbaView-Web/) 및 같은 웹앱을 담은 안드로이드 앱 DabbaView</p>
+
+    <h2>한 줄 요약</h2>
+    <p>
+      DabbaView는 <b>의료 영상을 서버로 보내지 않습니다.</b> 영상은 사용자의 기기(브라우저) 안에서만 열리고 처리되며,
+      개발자는 사용자의 영상·환자 정보·사용 기록을 수집하거나 볼 수 없습니다.
+    </p>
+
+    <h2>1. 수집하지 않는 것</h2>
+    <ul>
+      <li>DICOM 등 의료 영상 파일과 그 안의 환자 정보 — 기기 밖으로 전송되지 않습니다.</li>
+      <li>이름·이메일·전화번호 등 개인 식별 정보 — 앱은 회원 가입이 없습니다.</li>
+      <li>사용 기록·분석(Analytics)·광고 식별자 — 분석 도구나 광고 SDK를 넣지 않았습니다.</li>
+    </ul>
+
+    <h2>2. 기기 안에만 저장되는 것</h2>
+    <ul>
+      <li><b>설정</b>(화면 구성·도구·레이아웃 등): 브라우저 저장소(localStorage)에 저장됩니다.</li>
+      <li><b>클라우드에서 받은 파일 캐시</b>: Google Drive·OneDrive에서 불러온 파일을 다시 받지 않도록 브라우저 저장소(IndexedDB)에 보관합니다. 앱의 <i>설정 ▸ 캐시</i>에서 언제든 지울 수 있고, 브라우저 데이터 삭제로도 지워집니다.</li>
+      <li><b>앱 파일 캐시</b>(서비스 워커): 인터넷 없이도 앱이 열리도록 화면·프로그램 파일만 저장합니다. <b>의료 영상은 이 캐시에 저장하지 않습니다.</b></li>
+    </ul>
+    <p>이 저장소는 사용자의 기기에만 있으며 개발자에게 전송되지 않습니다.</p>
+
+    <h2>3. 외부와 통신하는 경우</h2>
+    <p>다음은 사용자가 그 기능을 직접 쓸 때만 일어납니다.</p>
+    <ul>
+      <li><b>Google Drive 연동</b>: 사용자가 로그인하고 고른 파일만 기기로 내려받습니다. 통신 상대는 Google(<code>accounts.google.com</code>, <code>googleapis.com</code>)이며, 이용에는 Google의 개인정보처리방침이 함께 적용됩니다.</li>
+      <li><b>OneDrive 연동</b>: 위와 같으며 통신 상대는 Microsoft(<code>login.microsoftonline.com</code>, <code>graph.microsoft.com</code>)입니다.</li>
+      <li><b>새 버전 확인</b>: 앱을 열 때 배포 서버의 버전 파일과 GitHub의 공개 릴리스 정보(<code>api.github.com</code>)를 읽습니다. 개인 정보는 보내지 않습니다.</li>
+      <li><b>웹사이트 호스팅</b>: 앱 파일은 GitHub Pages에서 제공되며, 접속 시 GitHub가 통신에 필요한 접속 기록(IP 주소 등)을 자체 정책에 따라 처리할 수 있습니다.</li>
+    </ul>
+    <p>클라우드 로그인 정보(토큰)는 해당 서비스의 로그인 절차에 따라 기기 안에 보관되며, 개발자 서버로 전송되지 않습니다. 개발자는 사용자의 클라우드 파일에 접근할 수 없습니다.</p>
+
+    <h2>4. 권한</h2>
+    <p>안드로이드 앱은 인터넷 접속 권한만 사용합니다. 사진·파일 접근은 사용자가 파일을 고를 때 시스템 선택 창을 통해서만 이루어지며, 앱이 기기의 파일을 스스로 뒤지지 않습니다.</p>
+
+    <h2>5. 어린이</h2>
+    <p>이 앱은 의료 영상을 보기 위한 도구로, 만 13세 미만 어린이를 대상으로 하지 않으며 어린이의 개인정보를 의도적으로 수집하지 않습니다.</p>
+
+    <h2>6. 의료기기 아님</h2>
+    <p>DabbaView는 연구·교육·개인 참고용 소프트웨어이며 <b>진단용 의료기기가 아닙니다.</b> 임상 판단에 사용하지 마십시오.</p>
+
+    <h2>7. 문의</h2>
+    <p>문의: <a href="https://github.com/Dabbabbu/DabbaView-Web/issues">GitHub Issues</a> (공개 게시판이므로 환자 정보를 올리지 마세요).</p>
+
+    <hr />
+
+    <h1>Privacy Policy (English)</h1>
+    <p class="muted">Last updated: 2026-09-23 · Applies to DabbaView Web and the DabbaView Android app.</p>
+    <h3>Summary</h3>
+    <p>DabbaView does <b>not</b> upload your medical images. Files are opened and processed entirely on your device. The developer cannot see your images, patient data, or usage.</p>
+    <h3>Not collected</h3>
+    <p>No medical images or patient data leave your device. No accounts, no analytics, no advertising identifiers.</p>
+    <h3>Stored on your device only</h3>
+    <p>App settings (localStorage), an optional cache of files you downloaded from cloud storage (IndexedDB, clearable in Settings ▸ Cache), and the app's own program files (service worker cache). Medical images are never written to the service worker cache.</p>
+    <h3>Network access</h3>
+    <p>Only when you use those features: Google Drive and OneDrive sign-in and file download (subject to Google's and Microsoft's own privacy policies), and an update check against the deployment's version file and the public GitHub releases API. The site is hosted on GitHub Pages, which may log connection data under its own policy.</p>
+    <h3>Permissions</h3>
+    <p>The Android app uses internet access only. File access happens through the system file picker when you choose files.</p>
+    <h3>Not a medical device</h3>
+    <p>DabbaView is for research, education, and personal reference. It is not a diagnostic medical device.</p>
+    <h3>Contact</h3>
+    <p><a href="https://github.com/Dabbabbu/DabbaView-Web/issues">GitHub Issues</a> — please do not post patient data.</p>
+  </body>
+</html>
