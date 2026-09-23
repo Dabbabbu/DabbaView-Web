@@ -32,6 +32,7 @@ import TagViewer from './components/TagViewer';
 import ExportDialog from './components/ExportDialog';
 import AnonymizeDialog from './components/AnonymizeDialog';
 import SettingsDialog from './components/SettingsDialog';
+import LayoutConfig from './components/LayoutConfig';
 import OneDriveBrowser from './components/OneDriveBrowser';
 import HelpDialog from './components/HelpDialog';
 import AboutDialog from './components/AboutDialog';
@@ -317,6 +318,7 @@ export default function App() {
       {dialog === 'export' && <ExportDialog onClose={closeDialog} />}
       {dialog === 'anonymize' && <AnonymizeDialog onClose={closeDialog} />}
       {dialog === 'settings' && <SettingsDialog onClose={closeDialog} />}
+      {dialog === 'layout' && <LayoutConfig onClose={closeDialog} />}
       {dialog === 'onedrive' && <OneDriveBrowser onClose={closeDialog} />}
       {dialog === 'help' && <HelpDialog onClose={closeDialog} />}
       {dialog === 'about' && <AboutDialog onClose={closeDialog} />}

@@ -1,10 +1,36 @@
 import { create } from 'zustand';
+import {
+  AUTO,
+  DEFAULT_ACTIVE,
+  LAYOUT_SIZES,
+  MAX_CELLS,
+  cleanLayout,
+  cleanList,
+  layoutCells,
+  layoutForCount,
+  parseLayout,
+} from './layouts';
 
-export const LAYOUTS = {
-  '1x1': { rows: 1, cols: 1 },
-  '1x2': { rows: 1, cols: 2 },
-  '2x1': { rows: 2, cols: 1 },
-  '2x2': { rows: 2, cols: 2 },
+/** 이름 → { rows, cols }. 목록에 없는 '5x2' 같은 것도 해석해서 돌려준다 */
+export const LAYOUTS = new Proxy(LAYOUT_SIZES, {
+  get: (target, key) => (typeof key === 'string' ? target[key] || parseLayout(key) || { rows: 1, cols: 1 } : target[key]),
+  has: (target, key) => typeof key === 'string' && !!(target[key] || parseLayout(key)),
+});
+
+const readJson = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+const writeJson = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* noop */
+  }
 };
 
 const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
@@ -18,7 +44,10 @@ export const useStore = create((set, get) => ({
   // 화면
   mode: 'stack', // 'stack' | 'mpr'
   layout: '1x1',
-  viewportSeries: [null, null, null, null], // 칸별 series key
+  layoutPresets: cleanList(readJson('dv.layoutPresets', DEFAULT_ACTIVE)), // 드롭다운에 나올 목록
+  autoLayout: readJson('dv.autoLayout', true) !== false, // 시리즈 수에 맞춰 스스로
+  sliceBar: readJson('dv.sliceBar', true) !== false, // 영상 오른쪽 슬라이스 막대
+  viewportSeries: Array(MAX_CELLS).fill(null), // 칸별 series key
   activeIndex: 0,
   selected: [0], // 함께 스크롤할 칸들 (Ctrl/⌘+클릭으로 추가)
   syncScroll: false, // ON이면 모든 칸이 함께 이동
@@ -66,11 +95,11 @@ export const useStore = create((set, get) => ({
     let layout = get().layout;
     const fresh = newSeries.filter((s) => !get().series.some((x) => x.key === s.key));
     if (get().series.length && fresh.length && get().mode === 'stack') {
-      const order = ['1x1', '1x2', '2x2'];
-      while (order.indexOf(layout) >= 0 && order.indexOf(layout) < order.length - 1) {
-        const { rows: r, cols: c } = LAYOUTS[layout];
-        if (vs.slice(0, r * c).some((k) => !k)) break;
-        layout = order[order.indexOf(layout) + 1];
+      // 빈 칸이 없으면 격자를 키워 새 시리즈를 나란히 (Auto면 시리즈 수에 딱 맞게)
+      const used = vs.slice(0, layoutCells(layout)).filter(Boolean).length;
+      const want = used + fresh.length;
+      if (!vs.slice(0, layoutCells(layout)).some((k) => !k)) {
+        layout = layoutForCount(want, get().autoLayout ? get().layoutPresets : null);
       }
     }
     // 빈 칸에 자동 배치
@@ -88,7 +117,7 @@ export const useStore = create((set, get) => ({
 
   clearAll() {
     set({ cursor3d: null, phaseByViewport: {} });
-    set({ series: [], viewportSeries: [null, null, null, null], mprSeriesKey: null, mode: 'stack', activeIndex: 0 });
+    set({ series: [], viewportSeries: Array(MAX_CELLS).fill(null), mprSeriesKey: null, mode: 'stack', activeIndex: 0 });
   },
 
   assignSeries(index, key) {
@@ -97,9 +126,33 @@ export const useStore = create((set, get) => ({
     set({ viewportSeries: vs, activeIndex: index });
   },
 
-  setLayout(layout) {
-    set({ selected: [Math.min(get().activeIndex, LAYOUTS[layout].rows * LAYOUTS[layout].cols - 1)] });
-    set({ layout, mode: 'stack', activeIndex: Math.min(get().activeIndex, LAYOUTS[layout].rows * LAYOUTS[layout].cols - 1) });
+  setLayout(layout, user = false) {
+    const id = cleanLayout(layout);
+    if (!id || id === AUTO) return;
+    const last = layoutCells(id) - 1;
+    const activeIndex = Math.min(get().activeIndex, last);
+    if (user && get().autoLayout) get().setAutoLayout(false);
+    set({ layout: id, mode: 'stack', activeIndex, selected: [activeIndex] });
+  },
+
+  /** Auto: 열린 시리즈 수에 맞는 레이아웃을 스스로 고름 */
+  setAutoLayout(on) {
+    writeJson('dv.autoLayout', !!on);
+    set({ autoLayout: !!on });
+  },
+  applyAutoLayout() {
+    const used = get().viewportSeries.filter(Boolean).length;
+    get().setLayout(layoutForCount(Math.max(1, used), get().layoutPresets));
+  },
+  setLayoutPresets(values) {
+    const presets = cleanList(values);
+    writeJson('dv.layoutPresets', presets);
+    set({ layoutPresets: presets });
+  },
+  toggleSliceBar() {
+    const on = !get().sliceBar;
+    writeJson('dv.sliceBar', on);
+    set({ sliceBar: on });
   },
 
   setActiveIndex: (activeIndex) => set({ activeIndex, selected: [activeIndex] }),

@@ -116,6 +116,20 @@ export default function SettingsDialog({ onClose }) {
           SPA Redirect URI: <code>{origin}auth-redirect.html</code>
         </p>
 
+        <h3>화면</h3>
+        <label className="check">
+          <input type="checkbox" checked={useStore((st) => st.sliceBar)} onChange={() => useStore.getState().toggleSliceBar()} /> 영상 오른쪽
+          슬라이스 막대 (끌어서 빠르게 이동)
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={useStore((st) => st.dragPads)} onChange={() => useStore.getState().toggleDragPads()} /> 영상 아래 Zoom ·
+          W/L 조절 칸
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={useStore((st) => st.autoLayout)} onChange={(e) => useStore.getState().setAutoLayout(e.target.checked)} />{' '}
+          Auto 레이아웃 (영상을 열 때 시리즈 수에 맞게 칸 나누기)
+        </label>
+
         <h3>캐시 (클라우드 파일)</h3>
         {!isCacheAvailable() ? (
           <p className="muted small">이 브라우저는 IndexedDB를 지원하지 않아 캐시를 쓸 수 없습니다.</p>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore, getSeries } from '../store/useStore';
 import { getPhases } from '../dicom/phases';
 import { Icon } from './Icons';
+import { AUTO, layoutLabel } from '../store/layouts';
 import { APP_TITLE, APP_VERSION } from '../version';
 import { alignToActive } from '../cornerstone/sync';
 import {
@@ -45,6 +46,8 @@ export function openMprForActive() {
 
 export function HeaderBar({ onOpenFiles, onOpenFolder, onAddFiles, onAddFolder, onGoogleDrive, onOneDrive, onFind }) {
   const layout = useStore((s) => s.layout);
+  const layoutPresets = useStore((s) => s.layoutPresets);
+  const autoLayout = useStore((s) => s.autoLayout);
   const mode = useStore((s) => s.mode);
   const hasSeries = useStore((s) => s.series.length > 0);
   const [menu, setMenu] = useState(null);
@@ -111,10 +114,31 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onAddFiles, onAddFolder, 
 
       <div className="hgroup seg">
         {['1x1', '1x2', '2x2'].map((l) => (
-          <button key={l} className={`btn seg-btn ${mode === 'stack' && layout === l ? 'on' : ''}`} onClick={() => st().setLayout(l)}>
-            {l.toUpperCase()}
+          <button key={l} className={`btn seg-btn ${mode === 'stack' && !autoLayout && layout === l ? 'on' : ''}`} onClick={() => st().setLayout(l, true)}>
+            {layoutLabel(l)}
           </button>
         ))}
+        <select
+          className="layout-select"
+          title={'칸 나누기 (행 x 열) — Auto는 열린 시리즈 수에 맞춥니다'}
+          value={mode === 'stack' && autoLayout ? AUTO : layout}
+          onChange={(e) => {
+            if (e.target.value === AUTO) {
+              st().setAutoLayout(true);
+              st().applyAutoLayout();
+            } else st().setLayout(e.target.value, true);
+          }}
+        >
+          <option value={AUTO}>Auto</option>
+          {[...layoutPresets, ...(layoutPresets.includes(layout) ? [] : [layout])].map((l) => (
+            <option key={l} value={l}>
+              {layoutLabel(l)}
+            </option>
+          ))}
+        </select>
+        <button className="btn seg-btn" onClick={() => st().setDialog('layout')} title="레이아웃 목록 편집 (Config)">
+          ⚙
+        </button>
         <button className={`btn seg-btn ${mode === 'mpr' ? 'on' : ''}`} onClick={openMpr} title="MPR (Axial/Sagittal/Coronal)">
           MPR
         </button>

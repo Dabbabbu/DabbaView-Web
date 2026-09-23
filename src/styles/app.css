@@ -1325,3 +1325,123 @@ code {
   text-overflow: ellipsis;
   margin-top: 1px;
 }
+
+/* ── 영상 오른쪽 슬라이스 막대 (INFINITT 방식) ── */
+.slice-bar {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  bottom: 4px;
+  width: 13px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+  touch-action: none;
+  cursor: default;
+  z-index: 3;
+}
+.slice-bar-thumb {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  border-radius: 2px;
+  background: rgba(235, 235, 235, 0.75);
+}
+.slice-bar.on .slice-bar-thumb {
+  background: var(--select, #ffd400);
+}
+.slice-bar-label {
+  position: absolute;
+  right: 17px;
+  transform: translateY(-50%);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ── 레이아웃 드롭다운 · Config 창 ── */
+.layout-select {
+  height: 28px;
+  background: #2c2c2c;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 12px;
+}
+.layout-config {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.layout-config h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #9ab;
+}
+.layout-list {
+  height: 240px;
+  overflow: auto;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  padding: 4px;
+  background: #1b1b1b;
+}
+.layout-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #ddd;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.layout-item:hover {
+  background: #2e2e2e;
+}
+.layout-item.on {
+  background: #2a4f74;
+}
+.layout-preview {
+  display: grid;
+  gap: 1px;
+  width: 26px;
+  height: 20px;
+  flex: none;
+}
+.layout-preview > i {
+  background: #4a6a8a;
+  border-radius: 1px;
+}
+.layout-move {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 40px;
+}
+.layout-make {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #9ab;
+}
+.layout-make input {
+  width: 52px;
+  background: #2c2c2c;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 2px 4px;
+}

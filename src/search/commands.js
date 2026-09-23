@@ -73,11 +73,32 @@ export function buildCommands({ onOpenFiles, onOpenFolder, onAddFiles, onAddFold
     { label: 'OneDrive…', path: '열기', keywords: `${KW.cloud} ${KW.open} 원드라이브 onedrive microsoft ms`, run: onOneDrive },
     { label: '모두 닫기', path: '열기', keywords: '닫기 지우기 비우기 close clear all 초기화', run: () => st().clearAll(), disabled: !hasSeries },
     ...Object.keys(LAYOUTS).map((l) => ({
-      label: `레이아웃 ${l}`,
+      label: `레이아웃 ${l.toUpperCase()} (${l.split('x')[0]}줄 × ${l.split('x')[1]}칸)`,
       path: '화면',
-      keywords: `레이아웃 화면분할 분할 여러화면 멀티뷰 multi view layout grid ${l}`,
-      run: () => st().setLayout(l),
+      keywords: `레이아웃 화면분할 분할 여러화면 멀티뷰 multi view layout grid ${l} ${l.toUpperCase()}`,
+      run: () => st().setLayout(l, true),
     })),
+    {
+      label: '레이아웃 Auto (시리즈 수에 맞춤)',
+      path: '화면',
+      keywords: '자동 auto 레이아웃 분할 시리즈수 layout',
+      run: () => {
+        st().setAutoLayout(true);
+        st().applyAutoLayout();
+      },
+    },
+    {
+      label: '레이아웃 목록 편집 (Config)',
+      path: '화면',
+      keywords: '레이아웃 목록 설정 편집 config 프리셋 preset image set layout',
+      run: () => st().setDialog('layout'),
+    },
+    {
+      label: '영상 오른쪽 슬라이스 막대 켜기 · 끄기',
+      path: '화면',
+      keywords: '슬라이스 막대 스크롤바 scrollbar slice bar 오른쪽 이동',
+      run: () => st().toggleSliceBar(),
+    },
     { label: 'MPR (Axial · Sagittal · Coronal)', path: '화면', keywords: 'mpr 재구성 다평면 axial sagittal coronal 3방향 단면', run: openMprForActive, disabled: !hasSeries },
     { label: 'DICOM 태그', path: '헤더', shortcut: 'T', keywords: '태그 헤더 정보 tag tags dicom header meta', run: dlg('tags'), disabled: !hasSeries },
     {

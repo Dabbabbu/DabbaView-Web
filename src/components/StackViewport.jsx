@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Enums } from '@cornerstonejs/core';
 import { utilities as toolUtils } from '@cornerstonejs/tools';
 import { getEngine } from '../cornerstone/init';
@@ -21,6 +21,7 @@ import { valueAtWorld, formatLps } from '../cornerstone/planes';
 import { instanceMeta } from '../dicom/loader';
 import { useStore, getSeries } from '../store/useStore';
 import ViewportOverlay from './ViewportOverlay';
+import SliceBar from './SliceBar';
 
 const RENDER_EVENTS = [
   Enums.Events.IMAGE_RENDERED,
@@ -32,6 +33,12 @@ const RENDER_EVENTS = [
 export default function StackViewport({ index }) {
   const elRef = useRef(null);
   const [overlay, setOverlay] = useState(null);
+  const [slice, setSlice] = useState({ index: 0, total: 0 });   // 오른쪽 슬라이스 막대용
+  // 오버레이 글자와 슬라이스 막대는 늘 같은 순간의 값으로 (여러 곳에서 갱신되므로 한 군데로)
+  const applyView = useCallback((vp) => {
+    setOverlay(vp ? buildOverlay(vp) : null);
+    setSlice(vp ? { index: vp.getCurrentImageIdIndex?.() ?? 0, total: vp.getImageIds?.().length ?? 0 } : { index: 0, total: 0 });
+  }, []);
   const [dragOver, setDragOver] = useState(false);
   const seriesKey = useStore((s) => s.viewportSeries[index]);
   const active = useStore((s) => s.activeIndex === index);
@@ -61,7 +68,7 @@ export default function StackViewport({ index }) {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const vp = engine.getViewport(viewportId);
-        if (vp && vp.getImageIds().length) setOverlay(buildOverlay(vp));
+        if (vp && vp.getImageIds().length) applyView(vp);
       });
     };
     RENDER_EVENTS.forEach((e) => element.addEventListener(e, update));
@@ -171,7 +178,7 @@ export default function StackViewport({ index }) {
     useStore.getState().setCine(index, { playing: false });
     renderedViewports.delete(viewportId); // 새 시리즈 → 카메라 다시 잡아야 함
     if (!s) {
-      setOverlay(null);
+      applyView(null);
       return;
     }
     const phases = phase !== null ? getPhases(s) : null;
@@ -184,13 +191,13 @@ export default function StackViewport({ index }) {
           vp.setProperties(keep.props);
           vp.render();
           renderedViewports.add(viewportId);
-          setOverlay(buildOverlay(vp));
+          applyView(vp);
           return;
         }
         vp.resetCamera();
         ensureStandardOrientation(vp);
         vp.render();
-        setOverlay(buildOverlay(vp));
+        applyView(vp);
         // 레이아웃 전환 직후 캔버스 크기가 확정된 뒤 한 번 더 그림
         requestAnimationFrame(() => {
           if (engine.getViewport(viewportId) === vp) {
@@ -204,7 +211,7 @@ export default function StackViewport({ index }) {
         console.error(e);
         useStore.getState().showToast(`영상 표시 실패: ${e?.message || e?.error?.message || e}`, 'error');
       });
-  }, [seriesKey, imageIdsKey, viewportId, index, phase]);
+  }, [seriesKey, imageIdsKey, viewportId, index, phase, applyView]);
 
   const onDrop = (e) => {
     e.preventDefault();
@@ -262,6 +269,7 @@ export default function StackViewport({ index }) {
       {!series && <div className="viewport-empty">시리즈를 끌어다 놓거나 선택하세요</div>}
       {series && showOverlay && overlay && <ViewportOverlay data={overlay} />}
       {series && <ViewportLines index={index} />}
+      {series && <SliceBar index={index} current={slice.index} total={slice.total} />}
     </div>
   );
 }
