@@ -94,6 +94,21 @@ export function buildCommands({ onOpenFiles, onOpenFolder, onAddFiles, onAddFold
       run: () => st().setDialog('layout'),
     },
     {
+      label: '📲 앱으로 설치 (홈 화면에 추가)',
+      path: '화면',
+      keywords: '설치 앱 홈화면 바로가기 install pwa add to home screen 안드로이드 android 오프라인',
+      run: async () => {
+        const pwa = await import('../pwa');
+        if (pwa.isStandalone()) {
+          st().showToast('이미 앱으로 실행 중입니다');
+          return;
+        }
+        const result = await pwa.promptInstall();
+        if (result === 'accepted') st().showToast('홈 화면에 추가했습니다 — 이제 앱처럼 열 수 있습니다');
+        else if (result === 'unavailable') st().showToast(pwa.manualInstallHint(), 'info');
+      },
+    },
+    {
       label: '영상 오른쪽 슬라이스 막대 켜기 · 끄기',
       path: '화면',
       keywords: '슬라이스 막대 스크롤바 scrollbar slice bar 오른쪽 이동',

@@ -24,12 +24,25 @@ export default defineConfig({
       // 배포본에 version.json을 함께 올려, 열어 둔 탭이 새 배포를 알아채게 함
       name: 'dabbaview-version-json',
       closeBundle() {
-        const { writeFileSync, mkdirSync } = require_fs();
-        mkdirSync(resolve(import.meta.dirname, 'dist'), { recursive: true });
-        writeFileSync(
-          resolve(import.meta.dirname, 'dist/version.json'),
-          JSON.stringify({ version: pkg.version, built: new Date().toISOString() }, null, 2),
-        );
+        const { writeFileSync, mkdirSync, readdirSync, readFileSync: read } = require_fs();
+        const dist = resolve(import.meta.dirname, 'dist');
+        mkdirSync(dist, { recursive: true });
+        const built = new Date().toISOString();
+        writeFileSync(resolve(dist, 'version.json'), JSON.stringify({ version: pkg.version, built }, null, 2));
+
+        // PWA: 서비스 워커에 이번 빌드 버전을 새겨 넣고(새 배포 = 캐시 교체),
+        //      번들 · 코덱 WASM 목록을 만들어 설치할 때 미리 받아 두게 한다 (오프라인)
+        const swPath = resolve(dist, 'sw.js');
+        try {
+          const version = `${pkg.version}-${built.slice(0, 19).replace(/[:T]/g, '')}`;
+          writeFileSync(swPath, read(swPath, 'utf-8').replace('__SW_VERSION__', version));
+          const files = readdirSync(resolve(dist, 'assets'))
+            .filter((name) => /\.(js|css|wasm)$/.test(name))
+            .map((name) => `./assets/${name}`);
+          writeFileSync(resolve(dist, 'precache.json'), JSON.stringify({ version, files }, null, 2));
+        } catch {
+          /* dist에 sw.js가 없으면(개발 빌드) 넘어감 */
+        }
       },
     },
   ],

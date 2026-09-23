@@ -6,6 +6,15 @@
     <meta name="theme-color" content="#0b0d10" />
     <meta name="description" content="DabbaView Web - 브라우저 기반 DICOM 뷰어" />
 
+    <!-- PWA: 홈 화면에 추가하면 앱처럼 (안드로이드 Chrome · 데스크톱) -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DabbaView" />
+    <meta name="application-name" content="DabbaView" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+
     <!-- 링크 공유 미리보기 (카카오톡·Slack·X 등) -->
     <meta property="og:title" content="DabbaView Web - DICOM Viewer" />
     <meta
@@ -21,6 +30,7 @@
     <meta property="og:site_name" content="DabbaView Web" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
     <title>DabbaView Web</title>
   </head>
   <body>

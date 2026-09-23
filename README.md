@@ -64,7 +64,11 @@
 - 검사별 묶음, 가운데 슬라이스 **썸네일**, `시리즈번호/장수`, 시리즈(시퀀스) 이름, 선택 칸의 시리즈는 노란 테두리
 - 마우스를 올리면 TR/TE/TI, FA, 두께, Matrix 툴팁. MPR 가능한 시리즈에는 `MPR` 버튼
 
-### 모바일
+### 모바일 · 앱으로 설치 (PWA)
+- **홈 화면에 추가하면 앱처럼 실행됩니다** (안드로이드 Chrome: ⋮ → "앱 설치", iPhone Safari: 공유 → "홈 화면에 추가", 데스크톱 Chrome/Edge: 주소창 오른쪽 설치 아이콘). 기능 찾기(⌘F)에서 **"앱으로 설치"**로도 바로 띄울 수 있습니다.
+- 설치하면 주소창 없는 **전체 화면(standalone)**으로 열리고, 앱 아이콘 · 이름(DabbaView)이 생깁니다.
+- **인터넷이 없어도 열립니다**: 설치할 때 앱 화면과 번들 · 영상 코덱(WebAssembly)까지 받아 두므로, 비행기 모드에서도 기기 안 DICOM 파일을 열어 볼 수 있습니다 (클라우드 불러오기 · 새 버전 확인만 인터넷 필요).
+- **영상 파일은 캐시에 저장하지 않습니다** — 서비스 워커는 앱 파일만 저장하고, 환자 영상은 기기 밖으로도, 브라우저 캐시로도 나가지 않습니다.
 - 반응형 레이아웃: 하단 도구 막대, 시리즈 패널은 서랍(drawer), MPR은 세로 3단
 - 터치: 1손가락 = 선택 도구(기본: 스와이프 스크롤), 2손가락 벌리기/오므리기 = 확대/축소(두 손가락 가운데 기준), 2손가락 함께 위아래/좌우 = 슬라이스/위상, 3손가락 = 이동 (MPR은 2손가락 핀치 줌 + 이동)
 
@@ -186,6 +190,9 @@ npm version 1.1.0 --no-git-tag-version   # package.json만 바꾸면 다음 빌�
 DabbaView-Web/
 ├─ index.html              # 앱
 ├─ auth-redirect.html      # MSAL 팝업 redirect bridge
+├─ public/manifest.webmanifest  # PWA (앱 이름 · 아이콘 · standalone)
+├─ public/sw.js            # 서비스 워커 (앱 파일 캐시 · 오프라인, 영상은 캐시하지 않음)
+├─ public/icon-*.png       # 앱 아이콘 (192 · 512 · maskable · apple-touch)
 ├─ server/server.js        # Node 정적 서버 (npm start)
 ├─ src/
 │  ├─ App.jsx              # 레이아웃, 드래그앤드롭, 단축키
@@ -195,6 +202,7 @@ DabbaView-Web/
 │  ├─ cloud/               # Google Drive(Picker), OneDrive(MSAL + Graph)
 │  ├─ export/              # PNG/JPEG/GIF 캡처, ZIP
 │  ├─ components/          # 툴바, 시리즈 패널, 뷰포트, MPR, 대화상자
+│  ├─ pwa.js               # 서비스 워커 등록 · '앱으로 설치' 안내
 │  ├─ store/useStore.js    # zustand 상태
 │  └─ styles/app.css       # 다크 테마, 반응형
 └─ .github/workflows/deploy.yml
