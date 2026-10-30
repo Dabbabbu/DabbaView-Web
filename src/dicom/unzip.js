@@ -15,8 +15,9 @@ async function inflateRaw(bytes) {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-/** ZIP File → File[] (폴더 경로는 이름에 유지) */
-export async function unzipFile(file, depth = 0) {
+/** ZIP File → File[] (폴더 경로는 이름에 유지)
+ *  onEntry(done, total, name): 큰 ZIP을 풀 때 진행률을 알려 준다 */
+export async function unzipFile(file, depth = 0, onEntry = null) {
   const buf = new Uint8Array(await file.arrayBuffer());
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
 
@@ -41,6 +42,7 @@ export async function unzipFile(file, depth = 0) {
     /* 지원하지 않는 브라우저 */
   }
   const out = [];
+  let done = 0;
   for (let n = 0; n < count; n++) {
     if (dv.getUint32(p, true) !== SIG_CEN) break;
     const flags = dv.getUint16(p + 8, true);
@@ -74,8 +76,15 @@ export async function unzipFile(file, depth = 0) {
     const base = name.split('/').pop();
     const inner = new File([bytes], base, { type: 'application/octet-stream' });
     inner.dvPath = name; // 압축 안의 경로 (어디서 왔는지 표시)
-    if (depth < MAX_DEPTH && isZipName(base)) out.push(...(await unzipFile(inner, depth + 1)));
+    if (depth < MAX_DEPTH && isZipName(base)) out.push(...(await unzipFile(inner, depth + 1, onEntry)));
     else out.push(inner);
+
+    // 진행률: 파일마다 알리면 너무 잦아서 조금씩 끊어 보고한다
+    done++;
+    if (onEntry && (done === count || done % 8 === 0)) {
+      onEntry(done, count, base);
+      await new Promise((r) => setTimeout(r, 0)); // 화면이 갱신될 틈을 준다
+    }
   }
   return out;
 }

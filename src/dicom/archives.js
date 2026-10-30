@@ -95,8 +95,9 @@ async function viaLibarchive(file) {
   }
 }
 
-/** 압축파일 하나 → File[] */
-export async function extractArchive(file, depth = 0) {
+/** 압축파일 하나 → File[]
+ *  onEntry(done, total, name): 큰 압축파일을 풀 때 진행률 (ZIP·TAR만, 나머지는 끝날 때 한 번) */
+export async function extractArchive(file, depth = 0, onEntry = null) {
   if (file.size > MAX_ARCHIVE_BYTES) {
     throw new Error(`${file.name}: 2 GB가 넘는 압축파일은 브라우저에서 풀 수 없습니다 (데스크톱 DabbaView를 쓰거나 먼저 풀어서 폴더를 여세요)`);
   }
@@ -104,7 +105,7 @@ export async function extractArchive(file, depth = 0) {
   let files;
   if (name.endsWith('.zip')) {
     try {
-      files = await unzipFile(file, MAX_DEPTH); // 안쪽 압축은 아래에서 함께 처리
+      files = await unzipFile(file, MAX_DEPTH, onEntry); // 안쪽 압축은 아래에서 함께 처리
     } catch {
       files = await viaLibarchive(file); // ZIP64 · 다른 압축 방식
     }
@@ -125,11 +126,12 @@ export async function extractArchive(file, depth = 0) {
   const base = (file.dvPath || file.webkitRelativePath || file.name).replace(/[^/]*$/, '') + file.name;
   for (const f of files) f.dvPath = `${base}/${f.dvPath || f.name}`;
   // 압축 안의 압축
+  if (onEntry) onEntry(files.length, files.length, file.name);
   const out = [];
   for (const f of files) {
     if (depth < MAX_DEPTH && isArchiveName(f.name)) {
       try {
-        out.push(...(await extractArchive(f, depth + 1)));
+        out.push(...(await extractArchive(f, depth + 1, onEntry)));
       } catch {
         out.push(f);
       }
@@ -138,17 +140,20 @@ export async function extractArchive(file, depth = 0) {
   return out;
 }
 
-/** 목록 중 압축파일은 풀어서 합친다 (하나가 망가져도 나머지는 계속) */
+/** 목록 중 압축파일은 풀어서 합친다 (하나가 망가져도 나머지는 계속)
+ *  onProgress(n, name, done, total): n번째 압축파일 / 그 안에서 푼 개수 */
 export async function expandArchives(files, onProgress = () => {}) {
   const out = [];
   const errors = [];
+  const total = files.filter((f) => isArchiveName(f.name)).length;
   let count = 0;
   for (const f of files) {
     if (isArchiveName(f.name)) {
       count++;
-      onProgress(count, f.name);
+      const n = count;
+      onProgress(n, f.name, 0, 0, total);
       try {
-        out.push(...(await extractArchive(f)));
+        out.push(...(await extractArchive(f, 0, (done, inTotal) => onProgress(n, f.name, done, inTotal, total))));
       } catch (e) {
         errors.push(e.message || String(e));
       }

@@ -10,7 +10,13 @@ export async function ingestFiles(files, sourceLabel = '파일') {
   const { setLoading, addSeries, setThumbnail, showToast } = useStore.getState();
   if (!files?.length) return;
   try {
-    const expanded = await expandArchives(files, (n, name) => setLoading({ label: `압축 푸는 중… ${name}`, done: 0, total: 0 }));
+    const expanded = await expandArchives(files, (n, name, done, inTotal, total) =>
+      setLoading({
+        label: total > 1 ? `압축 푸는 중… ${name} (${n}/${total})` : `압축 푸는 중… ${name}`,
+        done: done || 0,
+        total: inTotal || 0,
+      }),
+    );
     files = expanded.files;
     const zipNote = expanded.errors.length ? ` · ${expanded.errors.join(' / ')}` : '';
     if (!files.length) {
