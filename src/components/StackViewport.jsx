@@ -20,7 +20,7 @@ import { attachTouchGestures } from '../cornerstone/touchGestures';
 import { getPhases } from '../dicom/phases';
 import { valueAtWorld, formatLps } from '../cornerstone/planes';
 import { instanceMeta } from '../dicom/loader';
-import { useStore, getSeries } from '../store/useStore';
+import { useStore, getSeries, LAYOUTS } from '../store/useStore';
 import { attachWidthWheel, DRAW_TOOLS } from '../cornerstone/drawStyle';
 import ViewportOverlay from './ViewportOverlay';
 import SliceBar from './SliceBar';
@@ -132,7 +132,16 @@ export default function StackViewport({ index }) {
       chord = null; // 마지막 버튼: 도구에도 알려 드래그를 끝내게 함
       element.style.cursor = '';
     };
-    const detachDbl = attachWlDoubleClick(cell, index); // 더블클릭 = 원본 W/L
+    const detachDbl = attachWlDoubleClick(cell, index); // 더블클릭 = 원본 W/L (측정 도구가 아닐 때)
+    // 여러 칸으로 보는 중 더블클릭 = 이 칸만 크게 ↔ 원래 배치 (원본 W/L보다 먼저)
+    const onDblMax = (e) => {
+      const st = useStore.getState();
+      if (!DRAW_TOOLS.includes(st.activeTool) && (st.maximized || LAYOUTS[st.layout].rows * LAYOUTS[st.layout].cols > 1)) {
+        e.stopPropagation();
+        st.toggleMaximized(index);
+      }
+    };
+    cell.addEventListener('dblclick', onDblMax, true);
     // 그리기 도구일 때 Ctrl+휠 = 선 굵기 (그 밖에는 Cornerstone Zoom 그대로)
     const detachWheel = attachWidthWheel(cell, {
       isDrawing: () => DRAW_TOOLS.includes(useStore.getState().activeTool),
@@ -158,6 +167,7 @@ export default function StackViewport({ index }) {
       detachTouch();
       detachDbl();
       detachWheel();
+      cell.removeEventListener('dblclick', onDblMax, true);
       cell.removeEventListener('mousedown', onChordDown, true);
       window.removeEventListener('mousemove', onChordMove, true);
       window.removeEventListener('mouseup', onChordUp, true);

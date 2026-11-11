@@ -127,13 +127,39 @@ export const useStore = create((set, get) => ({
     set({ viewportSeries: vs, activeIndex: index });
   },
 
+  // 칸 하나만 크게 보기 (더블클릭) — 되돌릴 레이아웃을 기억해 둔다
+  maximized: null,   // { layout, index } 또는 null
+  toggleMaximized(index) {
+    const { maximized, layout, activeIndex } = get();
+    if (maximized) {
+      // 원래 배치로 — 크게 보려고 0번 칸과 바꿔 둔 시리즈도 제자리로 돌려놓는다
+      const vs = [...get().viewportSeries];
+      if (maximized.swapped) {
+        [vs[0], vs[maximized.index]] = [vs[maximized.index], vs[0]];
+      }
+      set({ layout: maximized.layout, maximized: null, viewportSeries: vs,
+            activeIndex: maximized.index, selected: [maximized.index] });
+      return false;
+    }
+    if (layoutCells(layout) <= 1) return false;   // 이미 1x1이면 할 일 없음
+    const target = index ?? activeIndex;
+    const vs = [...get().viewportSeries];
+    const swapped = target !== 0;
+    if (swapped) {                      // 1x1은 0번 칸만 보이므로 그 칸으로 옮긴다
+      [vs[0], vs[target]] = [vs[target], vs[0]];
+    }
+    set({ maximized: { layout, index: target, swapped }, layout: '1x1',
+          viewportSeries: vs, activeIndex: 0, selected: [0] });
+    return true;
+  },
+
   setLayout(layout, user = false) {
     const id = cleanLayout(layout);
     if (!id || id === AUTO) return;
     const last = layoutCells(id) - 1;
     const activeIndex = Math.min(get().activeIndex, last);
     if (user && get().autoLayout) get().setAutoLayout(false);
-    set({ layout: id, mode: 'stack', activeIndex, selected: [activeIndex] });
+    set({ layout: id, mode: 'stack', activeIndex, selected: [activeIndex], maximized: null });
   },
 
   /** Auto: 열린 시리즈 수에 맞는 레이아웃을 스스로 고름 */
