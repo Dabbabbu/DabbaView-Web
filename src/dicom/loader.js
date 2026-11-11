@@ -264,13 +264,25 @@ const seriesStamp = (s) => {
   const time = timeText(m.seriesTime);
   return m.seriesDate || time ? `${m.seriesDate || ''}${time}` : '';
 };
-/** 검사 안에서는 SeriesNumber 순 (PACS·INFINITT와 같은 순서).
+/** 원본 촬영인가, 만들어낸 영상인가 (T1 Map · R_Squared · ADC · MIP …)
+ *
+ *  DICOM ImageType(0008,0008)으로 가린다 — DERIVED 또는 SECONDARY가 들어 있으면 만들어낸 영상.
+ *  태그가 없으면 원본으로 본다 (그러면 번호 순서 그대로). 데스크톱 DabbaView와 같은 규칙. */
+export const isDerived = (s) => {
+  const words = String(s?.meta?.imageType || '').toUpperCase();
+  return words.includes('DERIVED') || words.includes('SECONDARY');
+};
+
+/** 검사 안에서는 ① 원본 촬영 먼저, 만들어낸 영상(리컨)을 뒤로 ② 그 안에서 SeriesNumber 순.
+ *  원본 1·2·3 … 을 쭉 보고 나서 T1 Map·R_Squared 같은 리컨을 몰아서 보게 된다.
  *  번호가 없으면 찍은 때 → 이름 순으로 뒤에 붙인다. */
 export const seriesOrder = (a, b) =>
   cmp(
     [a.meta?.studyDate || '', timeText(a.meta?.studyTime), a.studyInstanceUID || '',
+     isDerived(a) ? 1 : 0,
      a.seriesNumber ?? 1e9, seriesStamp(a), a.seriesDescription || '', a.key],
     [b.meta?.studyDate || '', timeText(b.meta?.studyTime), b.studyInstanceUID || '',
+     isDerived(b) ? 1 : 0,
      b.seriesNumber ?? 1e9, seriesStamp(b), b.seriesDescription || '', b.key],
   );
 

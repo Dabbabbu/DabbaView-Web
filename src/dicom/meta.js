@@ -100,6 +100,8 @@ export function extractMeta(ds) {
     imagePositionPatient: ipp,
     imageOrientationPatient: iop,
     numberOfFrames: n('x00280008') || 1,
+    // ImageType(0008,0008) — ORIGINAL/PRIMARY면 원본, DERIVED·SECONDARY면 만들어낸 영상
+    imageType: s('x00080008'),
     windowCenter: f('x00281050'),
     windowWidth: f('x00281051'),
     rescaleSlope: f('x00281053'),
