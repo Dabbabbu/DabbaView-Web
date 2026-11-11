@@ -5,7 +5,7 @@ import { clearGeometryCache } from '../cornerstone/sync';
 import { isVolumeFile, parseVolumeFile } from '../formats/parse';
 import { addVolume } from '../formats/volumeLoader';
 
-/** File[] → 파싱 → 스토어 반영 → 썸네일 생성 (공통 진입점) */
+/** File[] → 파싱 → 스토어 반영 → 썸네일 생성 (공통 진입점) · 불러온 시리즈를 돌려준다 */
 export async function ingestFiles(files, sourceLabel = '파일') {
   const { setLoading, addSeries, setThumbnail, showToast } = useStore.getState();
   if (!files?.length) return;
@@ -56,15 +56,24 @@ export async function ingestFiles(files, sourceLabel = '파일') {
       zipNote ? 'error' : 'info',
     );
     setLoading(null);
-    // 썸네일은 뒤에서 순차 생성
-    for (const s of series) {
-      const thumb = await makeThumbnail(s);
-      if (thumb) setThumbnail(s.key, thumb);
-    }
+    // 썸네일은 뒤에서 순차 생성 — 기다리지 않는다
+    // (한 시리즈의 썸네일이 늦어도 영상은 이미 보이고, 부르는 쪽도 막히지 않게)
+    void (async () => {
+      for (const s of series) {
+        try {
+          const thumb = await makeThumbnail(s);
+          if (thumb) setThumbnail(s.key, thumb);
+        } catch (e) {
+          console.warn('thumbnail failed', e);
+        }
+      }
+    })();
+    return series;
   } catch (e) {
     console.error(e);
     showToast(`불러오기 실패: ${e.message || e}`, 'error');
   } finally {
     setLoading(null);
   }
+  return [];
 }

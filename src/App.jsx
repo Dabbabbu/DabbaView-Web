@@ -26,6 +26,10 @@ import { applyRoiStats } from './cornerstone/roiStats';
 import { folderLabel } from './dicom/source';
 import { filesFromDataTransfer, filesFromInput } from './dicom/loader';
 import { ingestFiles } from './dicom/ingest';
+import {
+  listRecent, rememberStudy, filesOfRecent, forgetRecent, forgetAllRecent,
+  describeStudy, canRemember, formatBytes,
+} from './dicom/recent';
 import { pickFromGoogleDrive } from './cloud/googleDrive';
 import { isGoogleConfigured, isOneDriveConfigured } from './cloud/config';
 import { isAbort } from './cloud/transfer';
@@ -144,11 +148,65 @@ export default function App() {
     addMode.current = add;
     input.current?.click();
   };
+  const [recent, setRecent] = useState(() => listRecent());
+  const refreshRecent = () => setRecent(listRecent());
+
+  /** 불러오기 공통 — 끝나면 '최근에 본 검사'로 이 기기에 보관해 둔다 */
+  const loadFiles = async (files, sourceLabel, name, add = false) => {
+    if (!files?.length) return;
+    if (!add) useStore.getState().clearAll();
+    const series = await ingestFiles(files, sourceLabel);
+    if (!add && series?.length && name) {
+      await rememberStudy(files, name, describeStudy(series));
+      refreshRecent();
+    }
+  };
+
+  /** 고른 파일들의 이름 한 줄 (폴더로 열었으면 폴더 이름) */
+  const nameOf = (files) => {
+    const rel = files.find((f) => f.webkitRelativePath)?.webkitRelativePath;
+    if (rel) return rel.split('/')[0];
+    if (files.length === 1) return files[0].name;
+    return `${files[0].name} 외 ${files.length - 1}개`;
+  };
+
+  const loadRef = useRef(loadFiles);
+  loadRef.current = loadFiles;
+  if (import.meta.env.DEV) {
+    window.__dabbaview = { ...(window.__dabbaview || {}), loadFiles };   // 시험 자동화용
+  }
+
   const onFiles = (list) => {
     const files = filesFromInput(list);
     if (!files.length) return;
-    if (!addMode.current) useStore.getState().clearAll();
-    ingestFiles(files, addMode.current ? '추가한 파일' : '파일');
+    const add = addMode.current;
+    loadFiles(files, add ? '추가한 파일' : '파일', nameOf(files), add);
+  };
+
+  /** 최근에 본 검사 다시 열기 — 파일 고르기 창 없이 바로 */
+  const onOpenRecent = async (entry) => {
+    const { setLoading, showToast } = useStore.getState();
+    setLoading({ label: `${entry.label} 꺼내는 중…`, done: 0, total: entry.count });
+    let files = null;
+    try {
+      files = await filesOfRecent(entry, (done, total) =>
+        setLoading({ label: `${entry.label} 꺼내는 중…`, done, total }));
+    } catch (e) {
+      console.warn(e);
+    }
+    setLoading(null);
+    if (!files) {
+      showToast(
+        canRemember()
+          ? '보관해 둔 영상이 없어졌습니다 (저장 공간이 모자라 지워졌을 수 있습니다)'
+          : "'이 기기에 보관'이 꺼져 있습니다 (⚙ 설정에서 켜 주세요)",
+        'error',
+      );
+      refreshRecent();
+      return;
+    }
+    useStore.getState().clearAll();
+    await ingestFiles(files, entry.label);
   };
   const onGoogleDrive = async () => {
     const { setLoading, showToast, setDialog } = useStore.getState();
@@ -202,7 +260,7 @@ export default function App() {
       dragDepth.current = 0;
       setDropActive(false);
       const files = await filesFromDataTransfer(e.dataTransfer);
-      ingestFiles(files, '파일');
+      loadRef.current(files, '파일', nameOf(files));
     };
     window.addEventListener('dragenter', enter);
     window.addEventListener('dragover', over);
@@ -326,6 +384,10 @@ export default function App() {
               onOpenFolder={() => pick(folderInput, false)}
               onGoogleDrive={onGoogleDrive}
               onOneDrive={onOneDrive}
+              recent={recent}
+              onOpenRecent={onOpenRecent}
+              onForgetRecent={(id) => (forgetRecent(id), refreshRecent())}
+              onForgetAllRecent={() => (forgetAllRecent(), refreshRecent())}
             />
           )}
           {ready && hasSeries && (mode === 'mpr' ? <MprView /> : <ViewportGrid />)}
@@ -401,7 +463,8 @@ export default function App() {
   );
 }
 
-function Welcome({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive }) {
+function Welcome({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive,
+                   recent = [], onOpenRecent, onForgetRecent, onForgetAllRecent }) {
   return (
     <div className="welcome">
       <div className="welcome-card">
@@ -424,6 +487,36 @@ function Welcome({ onOpenFiles, onOpenFolder, onGoogleDrive, onOneDrive }) {
             <Icon name="onedrive" /> OneDrive
           </button>
         </div>
+        {recent.length > 0 && (
+          <div className="recent">
+            <div className="recent-head">
+              <span>최근에 본 검사</span>
+              <button className="link" onClick={onForgetAllRecent} title="보관해 둔 영상을 모두 지웁니다">
+                모두 지우기
+              </button>
+            </div>
+            {recent.map((e) => (
+              <div className="recent-row" key={e.id}>
+                <button className="recent-open" onClick={() => onOpenRecent(e)} title="파일을 다시 고르지 않고 바로 엽니다">
+                  <Icon name="folder" size={15} />
+                  <span className="recent-text">
+                    <span className="recent-label">{e.label}</span>
+                    <span className="recent-sub">{[e.sub, formatBytes(e.bytes)].filter(Boolean).join('  ·  ')}</span>
+                  </span>
+                </button>
+                <button className="recent-x" onClick={() => onForgetRecent(e.id)} title="이 검사만 지우기" aria-label="지우기">
+                  ×
+                </button>
+              </div>
+            ))}
+            <p className="muted small recent-note">
+              이 기기에만 보관됩니다 · 서버로 올라가지 않습니다
+            </p>
+          </div>
+        )}
+        {recent.length === 0 && canRemember() && (
+          <p className="muted small">한 번 연 검사는 이 기기에 남아, 다음에 여기서 바로 열 수 있습니다.</p>
+        )}
         <p className="app-version-static">{APP_TITLE}</p>
         <p className="muted small">모든 영상 처리는 브라우저 안에서만 이루어지며 서버로 업로드되지 않습니다. 진단용 의료기기가 아닙니다.</p>
       </div>

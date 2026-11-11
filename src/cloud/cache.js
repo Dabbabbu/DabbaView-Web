@@ -148,6 +148,88 @@ export async function cachePut(key, blob, { name, source, replacePrefix } = {}) 
   }
 }
 
+/** 여러 개를 한 번에 꺼내기 (없으면 그 자리는 null) — 검사 한 건을 되살릴 때 */
+export async function cacheGetMany(keys) {
+  if (!isCacheAvailable() || !getCacheSettings().enabled || !keys?.length) return keys.map(() => null);
+  try {
+    return await run(['blobs', 'meta'], 'readwrite', ({ blobs, meta }) => {
+      const out = new Array(keys.length).fill(null);
+      const now = Date.now();
+      keys.forEach((key, i) => {
+        const req = blobs.get(key);
+        req.onsuccess = () => {
+          out[i] = req.result || null;
+          if (!out[i]) return;
+          const m = meta.get(key);
+          m.onsuccess = () => m.result && meta.put({ ...m.result, lastAccess: now });
+        };
+      });
+      return () => out;
+    });
+  } catch (e) {
+    console.warn('cache get many failed', e);
+    return keys.map(() => null);
+  }
+}
+
+/**
+ * 여러 파일을 한 번에 넣기 (트랜잭션 하나) — 검사 한 건처럼 파일이 수백 개일 때 쓴다.
+ * 하나씩 cachePut을 부르면 트랜잭션이 그만큼 생겨 느리다.
+ */
+export async function cachePutMany(items, { source } = {}) {
+  if (!isCacheAvailable() || !items?.length) return false;
+  const { enabled, limit } = getCacheSettings();
+  const bytes = items.reduce((n, it) => n + (it.blob?.size || 0), 0);
+  if (!enabled || bytes > limit) return false;
+  try {
+    await ensureTotal();
+    const prevSize = await run(['blobs', 'meta'], 'readwrite', ({ blobs, meta }) => {
+      let prev = 0;
+      const now = Date.now();
+      for (const { key, blob, name } of items) {
+        const m = meta.get(key);
+        m.onsuccess = () => {
+          prev += m.result?.size || 0;
+          blobs.put(blob, key);
+          meta.put({ key, name, size: blob.size, source, lastAccess: now, created: m.result?.created || now });
+        };
+      }
+      return () => prev;
+    });
+    totalBytes += bytes - prevSize;
+    requestPersistence();
+    if (totalBytes > limit) scheduleEvict(300);
+    return true;
+  } catch (e) {
+    console.warn('cache put many failed', e);
+    if (e?.name === 'QuotaExceededError') await evict(Math.max(0, (totalBytes || 0) - bytes * 2));
+    return false;
+  }
+}
+
+/** 접두사로 한꺼번에 지우기 (검사 한 건을 통째로 지울 때) */
+export async function cacheDeletePrefix(prefix) {
+  if (!isCacheAvailable() || !prefix) return 0;
+  let freed = 0;
+  try {
+    await run(['blobs', 'meta'], 'readwrite', ({ blobs, meta }) => {
+      const req = meta.openCursor(IDBKeyRange.bound(prefix, `${prefix}\uffff`));
+      req.onsuccess = () => {
+        const c = req.result;
+        if (!c) return;
+        freed += c.value.size || 0;
+        blobs.delete(c.value.key);
+        c.delete();
+        c.continue();
+      };
+    });
+    if (totalBytes !== null) totalBytes = Math.max(0, totalBytes - freed);
+  } catch (e) {
+    console.warn('cache delete prefix failed', e);
+  }
+  return freed;
+}
+
 /** 전체 사용량 */
 export async function cacheStats() {
   if (!isCacheAvailable()) return { count: 0, bytes: 0 };

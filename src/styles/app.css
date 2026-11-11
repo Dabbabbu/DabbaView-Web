@@ -767,6 +767,93 @@ body.drawing .viewport-element {
   justify-content: center;
 }
 
+/* 최근에 본 검사 (시작 화면) — 파일을 다시 고르지 않고 바로 열기 */
+.recent {
+  margin: 0 0 18px;
+  text-align: left;
+}
+.recent-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.recent-head .link {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.recent-head .link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.recent-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.recent-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.recent-open:hover {
+  border-color: var(--accent);
+  background: var(--bg-3, #1a2027);
+}
+.recent-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.recent-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-sub {
+  color: var(--muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-x {
+  flex: none;
+  width: 34px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.recent-x:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.recent-note {
+  margin: 8px 0 0;
+}
+
 /* ─────────── 드롭 / 로딩 / 토스트 ─────────── */
 .drop-overlay {
   position: fixed;

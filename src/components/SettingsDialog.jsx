@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Modal from './Modal';
 import { getCloudConfig, saveCloudConfig, isGoogleConfigured, isOneDriveConfigured } from '../cloud/config';
 import { useStore } from '../store/useStore';
+import { forgetAllRecent } from '../dicom/recent';
 import {
   getCacheSettings,
   saveCacheSettings,
@@ -35,10 +36,11 @@ export default function SettingsDialog({ onClose }) {
   }, [refreshUsage]);
 
   const onClear = async () => {
-    if (!window.confirm('캐시에 보관한 클라우드 파일을 모두 지울까요? (다음에 열 때 다시 다운로드합니다)')) return;
+    if (!window.confirm('이 기기에 보관한 영상(최근에 본 검사 · 클라우드 파일)을 모두 지울까요?')) return;
     setClearing(true);
     try {
       await clearCache();
+      forgetAllRecent();     // '최근에 본 검사' 목록도 함께 (파일이 없어진 줄만 남지 않게)
       useStore.getState().showToast('캐시를 비웠습니다');
     } catch (e) {
       useStore.getState().showToast(`캐시 비우기 실패: ${e.message}`, 'error');
@@ -130,14 +132,14 @@ export default function SettingsDialog({ onClose }) {
           Auto 레이아웃 (영상을 열 때 시리즈 수에 맞게 칸 나누기)
         </label>
 
-        <h3>캐시 (클라우드 파일)</h3>
+        <h3>이 기기에 보관 (최근에 본 검사 · 클라우드 파일)</h3>
         {!isCacheAvailable() ? (
           <p className="muted small">이 브라우저는 IndexedDB를 지원하지 않아 캐시를 쓸 수 없습니다.</p>
         ) : (
           <>
             <p className="muted small">
-              Google Drive / OneDrive에서 받은 파일을 이 브라우저에 보관해서, 같은 파일을 다시 열 때 다운로드 없이 바로 엽니다. 클라우드에서 파일이
-              바뀌면 새로 받습니다. 한도를 넘으면 가장 오래 안 쓴 파일부터 지웁니다.
+              <b>최근에 본 검사</b>와 Google Drive / OneDrive에서 받은 파일을 이 브라우저에 보관해서, 다음에 파일을 다시 고르지 않고 시작 화면에서 바로
+              엽니다. 서버로 올라가지 않고 이 기기 안에만 남으며, 한도를 넘으면 가장 오래 안 쓴 것부터 지웁니다. 끄면 보관하지 않습니다.
             </p>
             <div className="cache-usage">
               <div className="progress wide">
@@ -149,7 +151,7 @@ export default function SettingsDialog({ onClose }) {
             </div>
             {usage?.quota > 0 && <p className="muted small">브라우저가 이 사이트에 허용한 저장 공간: 약 {formatBytes(usage.quota)}</p>}
             <label className="check">
-              <input type="checkbox" checked={cache.enabled} onChange={(e) => setCache({ ...cache, enabled: e.target.checked })} /> 캐시 사용
+              <input type="checkbox" checked={cache.enabled} onChange={(e) => setCache({ ...cache, enabled: e.target.checked })} /> 이 기기에 보관
             </label>
             <label>
               최대 크기 (GB)
