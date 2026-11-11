@@ -75,6 +75,7 @@ export default function App() {
   const activeKey = useStore((s) => s.viewportSeries[s.activeIndex]);
   const drawColor = useStore((s) => s.drawColor);
   const drawWidth = useStore((s) => s.drawWidth);
+  const scribbleShape = useStore((s) => s.scribbleShape);
   const roiStats = useStore((s) => s.roiStats);
 
   // 탭 제목에 지금 보는 시리즈의 폴더 이름 (어디서 왔는지)
@@ -100,9 +101,10 @@ export default function App() {
   useEffect(() => {
     if (!ready) return;
     const tool = activeTool === 'Crosshairs' && mode !== 'mpr' ? 'WindowLevel' : activeTool;
-    setPrimaryTool(getStackGroup(), tool === 'Crosshairs' ? 'WindowLevel' : tool);
-    setPrimaryTool(getMprGroup(), tool);
-  }, [ready, activeTool, mode]);
+    const opts = { shape: scribbleShape };
+    setPrimaryTool(getStackGroup(), tool === 'Crosshairs' ? 'WindowLevel' : tool, opts);
+    setPrimaryTool(getMprGroup(), tool, opts);
+  }, [ready, activeTool, mode, scribbleShape]);
 
   // ── 그리기 색·굵기: 앞으로 그릴 것의 기본값 + 마우스 커서 ──
   useEffect(() => {
@@ -287,7 +289,9 @@ export default function App() {
       if (e.target.closest?.('input, textarea, select')) return;
       if (st.dialog) return;
       const k = e.key;
-      const toolKeys = { w: 'WindowLevel', p: 'Pan', z: 'Zoom', s: 'Scroll', l: 'Length', a: 'Angle', b: 'Rectangle', e: 'Ellipse', d: 'Freehand' };
+      // (대문자 = Shift를 누른 것 — Shift+W는 ✍ 판서, 데스크톱과 같다)
+      const toolKeys = { w: 'WindowLevel', p: 'Pan', z: 'Zoom', s: 'Scroll', l: 'Length', a: 'Angle',
+                         b: 'Rectangle', e: 'Ellipse', d: 'Freehand', W: 'Scribble' };
       // ── 측정 편집: Ctrl(⌘)+E 모두 지우기 · Ctrl+Z 되돌리기 · Ctrl+Y(⌘+Shift+Z) 다시 되돌리기 ──
       const mod = (e.ctrlKey || e.metaKey) && !e.altKey;
       // 그리기 색: Ctrl(⌘)+R/B/G/W. Alt+R/B/G/W도 같은 색 (Ctrl+W를 브라우저가 가져가는 경우를 위해)

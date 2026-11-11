@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { DEFAULT_COLOR, DEFAULT_WIDTH, DRAW_COLORS, clampWidth } from '../cornerstone/drawStyle';
 import { ROI_STAT_ORDER, loadRoiStats, saveRoiStats } from '../cornerstone/roiStats';
+import { SCRIBBLE_SHAPES } from '../cornerstone/ScribbleTool';
 import {
   AUTO,
   DEFAULT_ACTIVE,
@@ -223,6 +224,16 @@ export const useStore = create((set, get) => ({
     const drawWidth = clampWidth(width);
     writeJson('dv.drawWidth', drawWidth);
     set({ drawWidth });
+  },
+  // ✍ 판서 도형 — 손가락만 쓰는 기기에서도 고를 수 있게 (수정키는 데스크톱용 지름길)
+  scribbleShape: (() => {
+    const saved = readJson('dv.scribbleShape', 'free');
+    return SCRIBBLE_SHAPES.some((s) => s.key === saved) ? saved : 'free';
+  })(),
+  setScribbleShape(scribbleShape) {
+    if (!SCRIBBLE_SHAPES.some((s) => s.key === scribbleShape)) return;
+    writeJson('dv.scribbleShape', scribbleShape);
+    set({ scribbleShape, activeTool: 'Scribble' });
   },
   // ROI 상자에 보일 값 (면적 · 평균 · 최대 · 최소 · 표준편차 …)
   roiStats: loadRoiStats(),

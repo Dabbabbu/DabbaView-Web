@@ -17,6 +17,7 @@ import {
 } from '@cornerstonejs/tools';
 import PinchZoomTool from './PinchZoomTool';
 import SoftWindowLevelTool, { SoftWindowLevelPrimaryTool } from './SoftWindowLevelTool';
+import { ALL_SCRIBBLE_TOOLS, installScribbleArrowFix } from './ScribbleTool';
 
 export const RENDERING_ENGINE_ID = 'dabbaview-engine';
 
@@ -47,7 +48,9 @@ export function initCornerstone() {
       SoftWindowLevelTool,
       SoftWindowLevelPrimaryTool,
       PinchZoomTool,
+      ...ALL_SCRIBBLE_TOOLS,
     ].forEach((T) => addTool(T));
+    installScribbleArrowFix();
     engine = getRenderingEngine(RENDERING_ENGINE_ID) || new RenderingEngine(RENDERING_ENGINE_ID);
     return engine;
   })();

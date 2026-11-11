@@ -435,3 +435,8 @@ function getViewportForIndex(index) {
   if (!engine) return null;
   return engine.getViewport(mode === 'mpr' ? MPR_VIEWPORT_IDS[index] : stackViewportId(index));
 }
+
+// 시험 자동화용 (개발 빌드에만) — 지금 그려진 것들이 어떤 도구로 그려졌는지
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
+  window.__dvAnn = () => (annotation.state.getAllAnnotations?.() || []).map((a) => a.metadata?.toolName);
+}

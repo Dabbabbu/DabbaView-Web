@@ -14,6 +14,7 @@ import {
 } from '@cornerstonejs/tools';
 import PinchZoomTool from './PinchZoomTool';
 import SoftWindowLevelTool, { SoftWindowLevelPrimaryTool } from './SoftWindowLevelTool';
+import { ScribbleTool, SCRIBBLE_TOOL_NAMES, SCRIBBLE_SHAPES, shapeTool } from './ScribbleTool';
 
 const { MouseBindings, KeyboardBindings } = ToolEnums;
 
@@ -31,6 +32,7 @@ export const PRIMARY_TOOLS = {
   Rectangle: RectangleROITool.toolName,
   Ellipse: EllipticalROITool.toolName,
   Freehand: PlanarFreehandROITool.toolName,
+  Scribble: ScribbleTool.toolName,
   Probe: ProbeTool.toolName,
   Crosshairs: CrosshairsTool.toolName,
 };
@@ -42,7 +44,47 @@ const ANNOTATION_TOOLS = [
   EllipticalROITool.toolName,
   PlanarFreehandROITool.toolName,
   ProbeTool.toolName,
+  ...SCRIBBLE_TOOL_NAMES,
 ];
+
+// ✍ 판서에서 수정키를 누른 채 끌면 도형 (ZoomIt과 같은 방식).
+// macOS에서 ⌘를 쓰는 분이 많아 Ctrl과 Meta를 같이 받는다.
+const SHAPE_MODIFIERS = {
+  line: [KeyboardBindings.Shift],
+  rect: [KeyboardBindings.Ctrl, KeyboardBindings.Meta],
+  ellipse: [KeyboardBindings.Alt],
+  arrow: [KeyboardBindings.ShiftCtrl, KeyboardBindings.ShiftMeta],
+};
+
+// Pan · Zoom이 쓰는 좌클릭 조합 (판서 중에는 도형에 내준다)
+const PAN_PRIMARY = { mouseButton: MouseBindings.Primary, modifierKey: KeyboardBindings.Alt };
+const ZOOM_PRIMARY = { mouseButton: MouseBindings.Primary, modifierKey: KeyboardBindings.Ctrl };
+
+/**
+ * 판서 중에는 Alt · Ctrl 좌드래그가 도형이므로, Pan · Zoom의 좌클릭 조합을 잠시 뗀다.
+ *
+ * setToolActive는 바인딩을 '더하기'만 하므로, 뗄 때는 setToolPassive에
+ * removeAllBindings로 그 조합을 집어 줘야 한다 (안 그러면 Pan이 Alt를 계속 가로챈다).
+ */
+function setScribbleShapes(group, on) {
+  SCRIBBLE_TOOL_NAMES.forEach((t) => {
+    if (group.hasTool(t)) group.setToolPassive(t, { removeAllBindings: true });
+  });
+  group.setToolPassive(PanTool.toolName, { removeAllBindings: [PAN_PRIMARY] });
+  group.setToolPassive(ZoomTool.toolName, { removeAllBindings: [ZOOM_PRIMARY] });
+  if (!on) {
+    group.setToolActive(PanTool.toolName, { bindings: [PAN_PRIMARY] });
+    group.setToolActive(ZoomTool.toolName, { bindings: [ZOOM_PRIMARY] });
+    return;
+  }
+  for (const shape of SCRIBBLE_SHAPES) {
+    const mods = SHAPE_MODIFIERS[shape.key];
+    if (!mods || !group.hasTool(shape.tool)) continue;
+    group.setToolActive(shape.tool, {
+      bindings: mods.map((m) => ({ mouseButton: MouseBindings.Primary, modifierKey: m })),
+    });
+  }
+}
 
 /**
  * PACS 표준 마우스 배치 (데스크톱 DabbaView와 동일)
@@ -104,10 +146,14 @@ export function getMprGroup() {
   return g;
 }
 
-/** 좌클릭(+1손가락 터치) 도구 변경. 휠/우클릭/가운데 바인딩은 유지. */
-export function setPrimaryTool(group, toolKey) {
+/**
+ * 좌클릭(+1손가락 터치) 도구 변경. 휠/우클릭/가운데 바인딩은 유지.
+ * 판서일 때는 고른 도형을 좌클릭에 걸고, 수정키 조합으로 나머지 도형도 쓸 수 있게 한다.
+ */
+export function setPrimaryTool(group, toolKey, { shape = 'free' } = {}) {
   if (!group) return;
-  const toolName = PRIMARY_TOOLS[toolKey];
+  const scribble = toolKey === 'Scribble';
+  const toolName = scribble ? shapeTool(shape) : PRIMARY_TOOLS[toolKey];
   if (!toolName || !group.hasTool(toolName)) return;
   const current = group.getActivePrimaryMouseButtonTool?.();
   if (current && current !== toolName) {
@@ -115,5 +161,11 @@ export function setPrimaryTool(group, toolKey) {
     if (current === CrosshairsTool.toolName) group.setToolDisabled(current);
     else group.setToolPassive(current);
   }
+  setScribbleShapes(group, scribble);
   group.setToolActive(toolName, { bindings: [{ mouseButton: MouseBindings.Primary }] });
+}
+
+// 시험 자동화용 (개발 빌드에만) — 도구 묶음의 실제 바인딩을 들여다볼 수 있게
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
+  window.__dvTools = { getStackGroup, getMprGroup, PRIMARY_TOOLS, SCRIBBLE_SHAPES };
 }

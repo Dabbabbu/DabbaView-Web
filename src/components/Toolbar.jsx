@@ -3,6 +3,7 @@ import { useStore, getSeries } from '../store/useStore';
 import { getPhases } from '../dicom/phases';
 import { Icon } from './Icons';
 import { DRAW_TOOLS, DRAW_COLORS, colorCss as colorCssOf, MIN_WIDTH, MAX_WIDTH } from '../cornerstone/drawStyle';
+import { SCRIBBLE_SHAPES } from '../cornerstone/ScribbleTool';
 import { ROI_STAT_ORDER, ROI_STAT_LABELS, ROI_STAT_DEFAULT } from '../cornerstone/roiStats';
 import { AUTO, layoutLabel } from '../store/layouts';
 import { APP_TITLE, APP_VERSION } from '../version';
@@ -37,10 +38,16 @@ export const TOOLS = [
   { key: 'Ellipse', icon: 'ellipse', label: '타원', title: '타원 ROI' },
   { key: 'Freehand', icon: 'freehand', label: '자유', title: '자유곡선 ROI' },
   { key: 'Probe', icon: 'probe', label: 'Probe', title: '픽셀 값' },
+  {
+    key: 'Scribble',
+    icon: 'scribble',
+    label: '판서',
+    title: '✍ 판서 — 숫자 없는 필기 (Shift+W)\nShift=직선 · Ctrl(⌘)=사각형 · Alt(⌥)=원 · Ctrl+Shift=화살표',
+  },
   { key: 'Cursor3D', icon: 'cursor3d', label: '3D', title: '3D 커서 — 클릭한 지점의 환자 좌표(L/P/S)와 값, 다른 칸에 초록 커서 표시' },
 ];
 
-const CTX_MENU_H = 420; // 메뉴 높이(어림) — 화면 밖으로 넘어가지 않게 자리를 잡을 때 쓴다
+const CTX_MENU_H = 480; // 메뉴 높이(어림) — 화면 밖으로 넘어가지 않게 자리를 잡을 때 쓴다 (판서 도형 줄 포함)
 
 /** 그리기 도구 아이콘 우클릭 메뉴 — 전체 지우기 · 되돌리기 · 다시 되돌리기 · 선택 삭제 */
 function DrawContextMenu({ at, onClose }) {
@@ -52,6 +59,9 @@ function DrawContextMenu({ at, onClose }) {
   const roiStats = useStore((s) => s.roiStats);
   const toggleRoiStat = useStore((s) => s.toggleRoiStat);
   const setRoiStats = useStore((s) => s.setRoiStats);
+  const activeTool = useStore((s) => s.activeTool);
+  const scribbleShape = useStore((s) => s.scribbleShape);
+  const setScribbleShape = useStore((s) => s.setScribbleShape);
   useClickOutside(ref, onClose);
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -100,6 +110,23 @@ function DrawContextMenu({ at, onClose }) {
       <button onClick={run(redoAnnotation)} disabled={!st.canRedo}>
         <Icon name="redo" size={16} /> 다시 되돌리기 <span className="menu-shortcut">Ctrl+Y</span>
       </button>
+      {activeTool === 'Scribble' && (
+        <>
+          <div className="menu-sep" />
+          <div className="ctxmenu-head">판서 도형 — 수정키를 누른 채 끌어도 됩니다</div>
+          {SCRIBBLE_SHAPES.map((s) => (
+            <button
+              key={s.key}
+              className={scribbleShape === s.key ? 'on' : ''}
+              onClick={() => setScribbleShape(s.key)}
+            >
+              {scribbleShape === s.key ? '✓ ' : '\u00a0\u00a0\u00a0'}
+              {s.label}
+              <span className="menu-shortcut">{s.keys}</span>
+            </button>
+          ))}
+        </>
+      )}
       <div className="menu-sep" />
       <div className="ctxmenu-head">ROI에 보일 값</div>
       <div className="swatches">

@@ -15,7 +15,7 @@ export const DRAW_COLORS = [
 ];
 
 /** 측정·주석을 그리는 도구 — 색·굵기·커서·우클릭 메뉴가 붙는다 */
-export const DRAW_TOOLS = ['Length', 'Angle', 'Rectangle', 'Ellipse', 'Freehand', 'Probe'];
+export const DRAW_TOOLS = ['Length', 'Angle', 'Rectangle', 'Ellipse', 'Freehand', 'Probe', 'Scribble'];
 
 export const DEFAULT_COLOR = 'red';
 export const MIN_WIDTH = 1;
