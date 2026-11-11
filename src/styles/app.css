@@ -1498,6 +1498,25 @@ body.drawing .viewport-element {
 .slice-bar.on .slice-bar-thumb {
   background: var(--select, #ffd400);
 }
+/* 아래쪽 가로 막대 = 위상 (cine일 때만). 세로 막대와 겹치지 않게 오른쪽을 비운다 */
+.slice-bar.horizontal {
+  top: auto;
+  bottom: 0;
+  left: 4px;
+  right: 17px;
+  width: auto;
+  height: 13px;
+}
+.slice-bar.horizontal .slice-bar-thumb {
+  left: auto;
+  right: auto;
+  top: 2px;
+  bottom: 2px;
+}
+/* 아래에 가로 막대가 있을 때만 세로 막대를 그 위까지로 (위상 없는 시리즈는 끝까지) */
+.slice-bar.short {
+  bottom: 17px;
+}
 .slice-bar-label {
   position: absolute;
   right: 17px;
@@ -1509,6 +1528,11 @@ body.drawing .viewport-element {
   font-size: 11px;
   white-space: nowrap;
   pointer-events: none;
+}
+.slice-bar.horizontal .slice-bar-label {
+  right: auto;
+  top: -20px;
+  transform: translateX(-50%);
 }
 
 /* ── 레이아웃 드롭다운 · Config 창 ── */

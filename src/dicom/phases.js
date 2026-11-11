@@ -61,6 +61,25 @@ export function phaseWhere(series, imageId) {
   return map.get(imageId) || null;
 }
 
+/** 위상 시리즈의 크기 → { phases, positions } (아니면 null) */
+export function phaseShape(series) {
+  const phases = getPhases(series);
+  if (!phases || phases.length < 2) return null;
+  return { phases: phases.length, positions: Math.max(...phases.map((ids) => ids.length)) };
+}
+
+/** 그 위치 · 그 위상의 imageId (없으면 그 위치의 첫 위상) */
+export function imageAt(series, position, phase) {
+  const phases = getPhases(series);
+  if (!phases || !phases.length) return null;
+  const wanted = phases[Math.max(0, Math.min(phases.length - 1, phase))] || [];
+  if (wanted[position]) return wanted[position];
+  for (const ids of phases) {
+    if (ids[position]) return ids[position];
+  }
+  return null;
+}
+
 export function clearPhaseCache() {
   cache.clear();
   whereCache.clear();
