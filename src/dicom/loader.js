@@ -256,10 +256,22 @@ export const seriesDateTime = (s) => {
   const date = m.seriesDate || m.acquisitionDate || m.contentDate || m.studyDate || '';
   return `${date}${timeText(m.seriesTime || m.acquisitionTime || m.contentTime)}`;
 };
+/** 시리즈를 줄 세울 때 쓸 '찍은 때' — 시리즈 단위 값만 본다
+ *  ContentTime·AcquisitionTime은 장마다 달라서, SeriesTime이 없는 시리즈(ADC·재구성 등)가
+ *  엉뚱한 자리에 끼어드는 원인이었다. 없으면 빈 값으로 두고 SeriesNumber에 맡긴다. */
+const seriesStamp = (s) => {
+  const m = s.meta || {};
+  const time = timeText(m.seriesTime);
+  return m.seriesDate || time ? `${m.seriesDate || ''}${time}` : '';
+};
+/** 검사 안에서는 SeriesNumber 순 (PACS·INFINITT와 같은 순서).
+ *  번호가 없으면 찍은 때 → 이름 순으로 뒤에 붙인다. */
 export const seriesOrder = (a, b) =>
   cmp(
-    [a.meta?.studyDate || '', timeText(a.meta?.studyTime), a.studyInstanceUID || '', seriesDateTime(a), a.seriesNumber ?? 1e9, a.seriesDescription || '', a.key],
-    [b.meta?.studyDate || '', timeText(b.meta?.studyTime), b.studyInstanceUID || '', seriesDateTime(b), b.seriesNumber ?? 1e9, b.seriesDescription || '', b.key],
+    [a.meta?.studyDate || '', timeText(a.meta?.studyTime), a.studyInstanceUID || '',
+     a.seriesNumber ?? 1e9, seriesStamp(a), a.seriesDescription || '', a.key],
+    [b.meta?.studyDate || '', timeText(b.meta?.studyTime), b.studyInstanceUID || '',
+     b.seriesNumber ?? 1e9, seriesStamp(b), b.seriesDescription || '', b.key],
   );
 
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];

@@ -385,7 +385,8 @@ code {
 }
 .series-list {
   display: grid;
-  grid-template-columns: 1fr;
+  /* 패널 너비에 맞춰 칸 수가 저절로 정해진다 — 좁으면 1열, 넓히면 2열 이상 */
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
   gap: 6px;
 }
 .series-item {
@@ -1112,9 +1113,6 @@ code {
   }
   .only-mobile {
     display: inline-grid;
-  }
-  .series-list {
-    grid-template-columns: 1fr 1fr;
   }
   .viewport-overlay {
     font-size: 10px;
