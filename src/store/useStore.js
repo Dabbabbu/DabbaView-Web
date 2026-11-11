@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { DEFAULT_COLOR, DEFAULT_WIDTH, DRAW_COLORS, clampWidth } from '../cornerstone/drawStyle';
 import {
   AUTO,
   DEFAULT_ACTIVE,
@@ -179,6 +180,27 @@ export const useStore = create((set, get) => ({
     set({ phaseByViewport: { ...get().phaseByViewport, [index]: phase } });
   },
   setActiveTool: (activeTool) => set({ activeTool }),
+
+  // 그리기 색·굵기 (다음에 와도 그대로)
+  drawColor: (() => {
+    const saved = readJson('dv.drawColor', DEFAULT_COLOR);
+    return DRAW_COLORS.some((c) => c.key === saved) ? saved : DEFAULT_COLOR;
+  })(),
+  drawWidth: clampWidth(readJson('dv.drawWidth', DEFAULT_WIDTH)),
+  setDrawColor(drawColor) {
+    if (!DRAW_COLORS.some((c) => c.key === drawColor)) return;
+    writeJson('dv.drawColor', drawColor);
+    set({ drawColor });
+  },
+  setDrawWidth(width) {
+    const drawWidth = clampWidth(width);
+    writeJson('dv.drawWidth', drawWidth);
+    set({ drawWidth });
+  },
+  nudgeDrawWidth(step) {
+    get().setDrawWidth(get().drawWidth + step);
+    return clampWidth(get().drawWidth);
+  },
   setMode: (mode) => set({ mode }),
   openMpr(key) {
     set({ mode: 'mpr', mprSeriesKey: key });

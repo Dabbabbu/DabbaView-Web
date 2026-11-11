@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore, getSeries } from '../store/useStore';
 import { getPhases } from '../dicom/phases';
 import { Icon } from './Icons';
+import { DRAW_TOOLS, DRAW_COLORS, colorCss as colorCssOf, MIN_WIDTH, MAX_WIDTH } from '../cornerstone/drawStyle';
 import { AUTO, layoutLabel } from '../store/layouts';
 import { APP_TITLE, APP_VERSION } from '../version';
 import { alignToActive } from '../cornerstone/sync';
@@ -38,14 +39,15 @@ export const TOOLS = [
   { key: 'Cursor3D', icon: 'cursor3d', label: '3D', title: '3D 커서 — 클릭한 지점의 환자 좌표(L/P/S)와 값, 다른 칸에 초록 커서 표시' },
 ];
 
-/** 우클릭하면 측정 편집 메뉴가 뜨는 그리기 도구들 */
-const DRAW_TOOLS = ['Length', 'Angle', 'Rectangle', 'Ellipse', 'Freehand', 'Probe'];
-
-const CTX_MENU_H = 190; // 메뉴 높이(어림) — 화면 밖으로 넘어가지 않게 자리를 잡을 때 쓴다
+const CTX_MENU_H = 290; // 메뉴 높이(어림) — 화면 밖으로 넘어가지 않게 자리를 잡을 때 쓴다
 
 /** 그리기 도구 아이콘 우클릭 메뉴 — 전체 지우기 · 되돌리기 · 다시 되돌리기 · 선택 삭제 */
 function DrawContextMenu({ at, onClose }) {
   const ref = useRef(null);
+  const drawColor = useStore((s) => s.drawColor);
+  const drawWidth = useStore((s) => s.drawWidth);
+  const setDrawColor = useStore((s) => s.setDrawColor);
+  const setDrawWidth = useStore((s) => s.setDrawWidth);
   useClickOutside(ref, onClose);
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -62,6 +64,32 @@ function DrawContextMenu({ at, onClose }) {
   return (
     <div className="menu ctxmenu" ref={ref} style={{ left, top }}>
       <div className="ctxmenu-head">측정 {st.total}개{st.selected ? ` · ${st.selected}개 고름` : ''}</div>
+      <div className="swatches">
+        {DRAW_COLORS.map((c) => (
+          <button
+            key={c.key}
+            className={`swatch ${drawColor === c.key ? 'on' : ''}`}
+            style={{ '--swatch': c.css }}
+            title={`${c.label} (${c.shortcut})`}
+            onClick={() => setDrawColor(c.key)}
+          >
+            <span />
+            {c.label}
+          </button>
+        ))}
+      </div>
+      <div className="ctxmenu-row">
+        <span className="muted">선 굵기</span>
+        <button className="step" title={`얇게 (Ctrl+휠 아래)`} disabled={drawWidth <= MIN_WIDTH} onClick={() => setDrawWidth(drawWidth - 1)}>
+          −
+        </button>
+        <b className="width-now">{drawWidth}</b>
+        <button className="step" title={`굵게 (Ctrl+휠 위)`} disabled={drawWidth >= MAX_WIDTH} onClick={() => setDrawWidth(drawWidth + 1)}>
+          +
+        </button>
+        <span className="width-demo" style={{ '--swatch': colorCssOf(drawColor), '--w': `${drawWidth}px` }} />
+      </div>
+      <div className="menu-sep" />
       <button onClick={run(undoAnnotation)} disabled={!st.canUndo}>
         <Icon name="undo" size={16} /> 되돌리기 <span className="menu-shortcut">Ctrl+Z</span>
       </button>

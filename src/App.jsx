@@ -21,6 +21,7 @@ import {
   deleteSelectedAnnotations,
 } from './cornerstone/actions';
 import { useStore, LAYOUTS, getSeries } from './store/useStore';
+import { applyDrawStyle, drawCursor, watchNewAnnotations, colorLabel, DRAW_TOOLS } from './cornerstone/drawStyle';
 import { folderLabel } from './dicom/source';
 import { filesFromDataTransfer, filesFromInput } from './dicom/loader';
 import { ingestFiles } from './dicom/ingest';
@@ -47,6 +48,9 @@ import UpdateBanner from './components/UpdateBanner';
 import { APP_TITLE } from './version';
 import { Icon } from './components/Icons';
 
+/** 색 단축키 — 키 코드 → 색 이름 */
+const COLOR_KEYS = { KeyR: 'red', KeyB: 'blue', KeyG: 'green', KeyW: 'white' };
+
 export default function App() {
   const [ready, setReady] = useState(false);
   const [initError, setInitError] = useState(null);
@@ -64,6 +68,8 @@ export default function App() {
   const panelOpen = useStore((s) => s.seriesPanelOpen);
   const dragPads = useStore((s) => s.dragPads);
   const activeKey = useStore((s) => s.viewportSeries[s.activeIndex]);
+  const drawColor = useStore((s) => s.drawColor);
+  const drawWidth = useStore((s) => s.drawWidth);
 
   // 탭 제목에 지금 보는 시리즈의 폴더 이름 (어디서 왔는지)
   useEffect(() => {
@@ -91,6 +97,24 @@ export default function App() {
     setPrimaryTool(getStackGroup(), tool === 'Crosshairs' ? 'WindowLevel' : tool);
     setPrimaryTool(getMprGroup(), tool);
   }, [ready, activeTool, mode]);
+
+  // ── 그리기 색·굵기: 앞으로 그릴 것의 기본값 + 마우스 커서 ──
+  useEffect(() => {
+    if (!ready) return;
+    applyDrawStyle(drawColor, drawWidth);
+    const drawing = DRAW_TOOLS.includes(activeTool);
+    document.body.classList.toggle('drawing', drawing);
+    document.body.style.setProperty('--draw-cursor', drawing ? drawCursor(drawColor, drawWidth) : 'crosshair');
+  }, [ready, drawColor, drawWidth, activeTool]);
+
+  // 새로 그린 측정에 그때의 색·굵기를 찍어 둔다 (나중에 색을 바꿔도 옛 측정은 그대로)
+  useEffect(() => {
+    if (!ready) return undefined;
+    return watchNewAnnotations(() => {
+      const s = useStore.getState();
+      return { colorKey: s.drawColor, width: s.drawWidth };
+    });
+  }, [ready]);
 
   // 탭을 다시 열었을 때 (숨겨진 동안 렌더링이 멈춰 카메라가 비어 있을 수 있음)
   useEffect(() => {
@@ -199,6 +223,14 @@ export default function App() {
       const toolKeys = { w: 'WindowLevel', p: 'Pan', z: 'Zoom', s: 'Scroll', l: 'Length', a: 'Angle', b: 'Rectangle', e: 'Ellipse', d: 'Freehand' };
       // ── 측정 편집: Ctrl(⌘)+E 모두 지우기 · Ctrl+Z 되돌리기 · Ctrl+Y(⌘+Shift+Z) 다시 되돌리기 ──
       const mod = (e.ctrlKey || e.metaKey) && !e.altKey;
+      // 그리기 색: Ctrl(⌘)+R/B/G/W. Alt+R/B/G/W도 같은 색 (Ctrl+W를 브라우저가 가져가는 경우를 위해)
+      const colorKey = COLOR_KEYS[e.code];
+      if (colorKey && (mod || (e.altKey && !e.ctrlKey && !e.metaKey)) && !e.shiftKey) {
+        st.setDrawColor(colorKey);
+        st.showToast(`그리기 색: ${colorLabel(colorKey)}`);
+        e.preventDefault();
+        return;
+      }
       if (mod) {
         const code = e.code;
         if (!e.shiftKey && code === 'KeyE') clearAnnotations();

@@ -5,6 +5,7 @@ import { getMprGroup } from '../cornerstone/tools';
 import { MPR_VIEWPORT_IDS, attachWlDoubleClick } from '../cornerstone/actions';
 import { buildOverlay } from '../cornerstone/overlay';
 import { useStore, getSeries } from '../store/useStore';
+import { attachWidthWheel, DRAW_TOOLS } from '../cornerstone/drawStyle';
 import ViewportOverlay from './ViewportOverlay';
 
 const PLANES = [
@@ -60,11 +61,19 @@ export default function MprView() {
       const noMenu = (e) => e.preventDefault();
       el.addEventListener('contextmenu', noMenu);
       const detachDbl = attachWlDoubleClick(el.parentElement, i); // 더블클릭 = 원본 W/L
+      const detachWheel = attachWidthWheel(el.parentElement, {
+        isDrawing: () => DRAW_TOOLS.includes(useStore.getState().activeTool),
+        nudge: (step) => {
+          const w = useStore.getState().nudgeDrawWidth(step);
+          useStore.getState().showToast(`선 굵기 ${w}`);
+        },
+      });
       return () => {
         cancelAnimationFrame(raf);
         EVENTS.forEach((e) => el.removeEventListener(e, update));
         el.removeEventListener('contextmenu', noMenu);
         detachDbl();
+        detachWheel();
       };
     });
 

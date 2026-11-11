@@ -21,6 +21,7 @@ import { getPhases } from '../dicom/phases';
 import { valueAtWorld, formatLps } from '../cornerstone/planes';
 import { instanceMeta } from '../dicom/loader';
 import { useStore, getSeries } from '../store/useStore';
+import { attachWidthWheel, DRAW_TOOLS } from '../cornerstone/drawStyle';
 import ViewportOverlay from './ViewportOverlay';
 import SliceBar from './SliceBar';
 
@@ -132,6 +133,14 @@ export default function StackViewport({ index }) {
       element.style.cursor = '';
     };
     const detachDbl = attachWlDoubleClick(cell, index); // 더블클릭 = 원본 W/L
+    // 그리기 도구일 때 Ctrl+휠 = 선 굵기 (그 밖에는 Cornerstone Zoom 그대로)
+    const detachWheel = attachWidthWheel(cell, {
+      isDrawing: () => DRAW_TOOLS.includes(useStore.getState().activeTool),
+      nudge: (step) => {
+        const w = useStore.getState().nudgeDrawWidth(step);
+        useStore.getState().showToast(`선 굵기 ${w}`);
+      },
+    });
     const detachTouch = attachTouchGestures(cell, element, () => engine.getViewport(viewportId), index);
     cell.addEventListener('mousedown', onChordDown, true);
     window.addEventListener('mousemove', onChordMove, true);
@@ -148,6 +157,7 @@ export default function StackViewport({ index }) {
       element.removeEventListener('contextmenu', noMenu);
       detachTouch();
       detachDbl();
+      detachWheel();
       cell.removeEventListener('mousedown', onChordDown, true);
       window.removeEventListener('mousemove', onChordMove, true);
       window.removeEventListener('mouseup', onChordUp, true);

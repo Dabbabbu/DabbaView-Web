@@ -278,6 +278,80 @@ code {
   color: var(--muted);
   font-size: 11px;
 }
+/* 색 고르기 — 2줄 2칸 */
+.swatches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 0 4px 4px;
+}
+.swatches .swatch {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.swatches .swatch span {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.swatches .swatch:hover {
+  background: var(--bg-4);
+}
+.swatches .swatch.on {
+  border-color: var(--accent);
+  background: rgba(58, 160, 255, 0.16);
+}
+/* 선 굵기 줄 */
+.ctxmenu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 8px;
+  font-size: 12px;
+}
+.ctxmenu-row .step {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg-4);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ctxmenu-row .step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ctxmenu-row .width-now {
+  min-width: 12px;
+  text-align: center;
+}
+.ctxmenu-row .width-demo {
+  flex: 1;
+  height: var(--w);
+  min-height: 1px;
+  border-radius: 4px;
+  background: var(--swatch);
+}
+/* 그리기 도구를 쓰는 동안 영상 위 커서 = 고른 색의 점
+   (Cornerstone이 도구마다 커서를 element.style에 직접 넣으므로 !important가 필요하다) */
+body.drawing .viewport-element {
+  cursor: var(--draw-cursor, crosshair) !important;
+}
 
 /* ─────────── 툴바 ─────────── */
 .toolbar {

@@ -1,4 +1,5 @@
 // 기능 찾기에 나오는 기능 목록 — 화면의 버튼·메뉴와 같은 동작을 부른다
+import { DRAW_COLORS } from '../cornerstone/drawStyle';
 import { useStore, LAYOUTS } from '../store/useStore';
 import { alignToActive } from '../cornerstone/sync';
 import {
@@ -203,6 +204,15 @@ export function buildCommands({ onOpenFiles, onOpenFolder, onAddFiles, onAddFold
     { label: '되돌리기 (측정)', path: '측정', shortcut: 'Ctrl+Z', keywords: `${KW.measure} 되돌리기 undo 취소 실행취소`, run: undoAnnotation },
     { label: '다시 되돌리기 (측정)', path: '측정', shortcut: 'Ctrl+Y', keywords: `${KW.measure} 다시 redo 재실행`, run: redoAnnotation },
     { label: '고른 측정 삭제', path: '측정', shortcut: 'Delete', keywords: `${KW.measure} 선택 삭제 delete 하나만`, run: deleteSelectedAnnotations },
+    ...DRAW_COLORS.map((c) => ({
+      label: `그리기 색: ${c.label}`,
+      path: '측정',
+      shortcut: c.shortcut,
+      keywords: `${KW.measure} 색 color 색상 ${c.label} ${c.key} 펜 선`,
+      run: () => st().setDrawColor(c.key),
+    })),
+    { label: '선 굵기 굵게', path: '측정', shortcut: 'Ctrl+휠↑', keywords: `${KW.measure} 굵기 두께 width 굵게 선`, run: () => st().nudgeDrawWidth(1) },
+    { label: '선 굵기 얇게', path: '측정', shortcut: 'Ctrl+휠↓', keywords: `${KW.measure} 굵기 두께 width 얇게 가늘게 선`, run: () => st().nudgeDrawWidth(-1) },
   ];
   return list;
 }
