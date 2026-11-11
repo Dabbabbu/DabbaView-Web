@@ -16,6 +16,7 @@ import {
   CrosshairsTool,
 } from '@cornerstonejs/tools';
 import PinchZoomTool from './PinchZoomTool';
+import SoftWindowLevelTool, { SoftWindowLevelPrimaryTool } from './SoftWindowLevelTool';
 
 export const RENDERING_ENGINE_ID = 'dabbaview-engine';
 
@@ -43,6 +44,8 @@ export function initCornerstone() {
       PlanarFreehandROITool,
       ProbeTool,
       CrosshairsTool,
+      SoftWindowLevelTool,
+      SoftWindowLevelPrimaryTool,
       PinchZoomTool,
     ].forEach((T) => addTool(T));
     engine = getRenderingEngine(RENDERING_ENGINE_ID) || new RenderingEngine(RENDERING_ENGINE_ID);

@@ -11,6 +11,7 @@ import {
   takePendingStart,
   chordGain,
   CHORD_PX_PER_STEP,
+  attachWlDoubleClick,
 } from '../cornerstone/actions';
 import { buildOverlay } from '../cornerstone/overlay';
 import { propagateScroll, notifyViewportChanged, jumpOthersToWorld } from '../cornerstone/sync';
@@ -130,6 +131,7 @@ export default function StackViewport({ index }) {
       chord = null; // 마지막 버튼: 도구에도 알려 드래그를 끝내게 함
       element.style.cursor = '';
     };
+    const detachDbl = attachWlDoubleClick(cell, index); // 더블클릭 = 원본 W/L
     const detachTouch = attachTouchGestures(cell, element, () => engine.getViewport(viewportId), index);
     cell.addEventListener('mousedown', onChordDown, true);
     window.addEventListener('mousemove', onChordMove, true);
@@ -145,6 +147,7 @@ export default function StackViewport({ index }) {
       renderedViewports.delete(viewportId);
       element.removeEventListener('contextmenu', noMenu);
       detachTouch();
+      detachDbl();
       cell.removeEventListener('mousedown', onChordDown, true);
       window.removeEventListener('mousemove', onChordMove, true);
       window.removeEventListener('mouseup', onChordUp, true);

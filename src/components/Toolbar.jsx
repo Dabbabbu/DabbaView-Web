@@ -103,7 +103,7 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onAddFiles, onAddFolder, 
                 <>
                   <div className="menu-sep" />
                   <button onClick={() => st().clearAll()}>
-                    <Icon name="trash" /> 모두 닫기
+                    <Icon name="trash" size={20} /> 모두 닫기
                   </button>
                 </>
               )}
@@ -192,10 +192,10 @@ export function HeaderBar({ onOpenFiles, onOpenFolder, onAddFiles, onAddFolder, 
               <Icon name="anon" /> 익명화
             </button>
             <button onClick={() => st().toggleOverlay()}>
-              <Icon name="overlay" /> 오버레이 표시/숨김
+              <Icon name="overlay" size={20} /> 오버레이 표시/숨김
             </button>
             <button onClick={clearAnnotations}>
-              <Icon name="trash" /> 측정 모두 지우기
+              <Icon name="trash" size={20} /> 측정 모두 지우기
             </button>
             <button onClick={() => st().setDialog('settings')}>
               <Icon name="settings" /> 설정
@@ -250,7 +250,7 @@ export function ToolBar() {
       <div className="tgroup">
         {tools.map((t) => (
           <button key={t.key} className={`tool ${activeTool === t.key ? 'on' : ''}`} title={t.title} onClick={() => st().setActiveTool(t.key)}>
-            <Icon name={t.icon} />
+            <Icon name={t.icon} size={20} />
             <span>{t.label}</span>
           </button>
         ))}
@@ -259,12 +259,13 @@ export function ToolBar() {
       <div className="tgroup">
         <div className="dropdown up-sm">
           <button className="tool" title="윈도우 프리셋 (1~9)" onClick={() => setMenu(menu === 'preset' ? null : 'preset')}>
-            <Icon name="wl" />
+            <Icon name="palette" size={20} />
             <span>프리셋</span>
           </button>
           {menu === 'preset' && (
             <div className="menu" onClick={() => setMenu(null)}>
-              <button onClick={resetWindow}>Default (DICOM)</button>
+              <button onClick={() => resetWindow()}>원본 W/L (DICOM 태그)</button>
+              <button onClick={() => resetWindow(true)}>원본 W/L — 모든 칸</button>
               {WINDOW_PRESETS.map((p) => (
                 <button key={p.name} onClick={() => applyWindow(p.width, p.center)}>
                   <span className="menu-key">{p.key || ''}</span>
@@ -278,39 +279,43 @@ export function ToolBar() {
             </div>
           )}
         </div>
+        <button className="tool" title={'원본 W/L로 되돌리기 (0)\nDICOM 태그의 Window Center/Width 값. 영상을 더블클릭해도 됩니다'} onClick={() => resetWindow()}>
+          <Icon name="wlsrc" size={20} />
+          <span>원본 W/L</span>
+        </button>
         <button className="tool" title="흑백 반전 (I)" onClick={toggleInvert}>
-          <Icon name="invert" />
+          <Icon name="invert" size={20} />
           <span>반전</span>
         </button>
         <button className="tool" title="왼쪽 90° 회전 (Shift+R)" onClick={() => rotate(-90)}>
-          <Icon name="rotL" />
+          <Icon name="rotL" size={20} />
           <span>↺90</span>
         </button>
         <button className="tool" title="오른쪽 90° 회전 (R)" onClick={() => rotate(90)}>
-          <Icon name="rotR" />
+          <Icon name="rotR" size={20} />
           <span>↻90</span>
         </button>
         <button className="tool" title="좌우 반전 (H)" onClick={() => flip(true)}>
-          <Icon name="flipH" />
+          <Icon name="flipH" size={20} />
           <span>좌우</span>
         </button>
         <button className="tool" title="상하 반전 (V)" onClick={() => flip(false)}>
-          <Icon name="flipV" />
+          <Icon name="flipV" size={20} />
           <span>상하</span>
         </button>
         <button className="tool" title="화면 맞춤 (F)" onClick={fitToWindow}>
-          <Icon name="fit" />
+          <Icon name="fit" size={20} />
           <span>맞춤</span>
         </button>
         <button className="tool" title="초기화 (Esc)" onClick={resetView}>
-          <Icon name="reset" />
+          <Icon name="reset" size={20} />
           <span>리셋</span>
         </button>
       </div>
       <div className="tsep" />
       <div className="tgroup">
         <button className={`tool ${cine.playing ? 'on' : ''}`} title="시네 재생/정지 (Space)" onClick={toggleCine}>
-          <Icon name={cine.playing ? 'stop' : 'play'} />
+          <Icon name={cine.playing ? 'stop' : 'play'} size={20} />
           <span>{cine.playing ? '정지' : '시네'}</span>
         </button>
         <label className="fps" title="초당 프레임">
@@ -325,7 +330,7 @@ export function ToolBar() {
           title={'Crosslink (PACS 스카우트) — 선택한 칸 시리즈의 스캔 플래닝을 다른 칸 위에: 전체 슬라이스는 파란 점선, 지금 슬라이스는 노란 실선 (선택한 칸에는 선 없음)'}
           onClick={() => st().toggleCrosslink()}
         >
-          <Icon name="crosslink" />
+          <Icon name="crosslink" size={20} />
           <span>Crosslink</span>
         </button>
         <button
@@ -333,7 +338,7 @@ export function ToolBar() {
           title={'Reference Line — 다른 칸의 현재 슬라이스 한 줄만 표시'}
           onClick={() => st().toggleReferenceLines()}
         >
-          <Icon name="refline" />
+          <Icon name="refline" size={20} />
           <span>Ref Line</span>
         </button>
         <button
@@ -345,18 +350,18 @@ export function ToolBar() {
             if (on) alignToActive();
           }}
         >
-          <Icon name="sync" />
+          <Icon name="sync" size={20} />
           <span>{syncScroll ? '동기 ON' : selectedCount > 1 ? `동기 ${selectedCount}칸` : '동기'}</span>
         </button>
       </div>
       <div className="tsep hide-sm" />
       <div className="tgroup hide-sm">
         <button className="tool" title="오버레이 표시/숨김 (O)" onClick={() => st().toggleOverlay()}>
-          <Icon name="overlay" />
+          <Icon name="overlay" size={20} />
           <span>정보</span>
         </button>
         <button className="tool" title="측정 모두 지우기" onClick={clearAnnotations}>
-          <Icon name="trash" />
+          <Icon name="trash" size={20} />
           <span>지우기</span>
         </button>
       </div>

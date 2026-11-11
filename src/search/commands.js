@@ -146,7 +146,8 @@ export function buildCommands({ onOpenFiles, onOpenFolder, onAddFiles, onAddFold
       keywords: `${TOOL_WORDS[t.key] || ''} ${t.title}`,
       run: () => st().setActiveTool(t.key),
     })),
-    { label: 'W/L 기본값 (DICOM)', path: '프리셋', shortcut: '0', keywords: `${KW.window} 프리셋 preset 기본 default 리셋`, run: resetWindow },
+    { label: '원본 W/L (DICOM 태그)', path: '프리셋', shortcut: '0', keywords: `${KW.window} 프리셋 preset 기본 default 리셋 원본 source`, run: () => resetWindow() },
+    { label: '원본 W/L — 모든 칸', path: '프리셋', keywords: `${KW.window} 원본 전체 all 리셋`, run: () => resetWindow(true) },
     ...WINDOW_PRESETS.map((p) => ({
       label: `W/L 프리셋: ${p.name}`,
       path: '프리셋',

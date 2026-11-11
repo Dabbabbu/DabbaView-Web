@@ -1,7 +1,6 @@
 import {
   ToolGroupManager,
   Enums as ToolEnums,
-  WindowLevelTool,
   PanTool,
   ZoomTool,
   StackScrollTool,
@@ -14,6 +13,7 @@ import {
   CrosshairsTool,
 } from '@cornerstonejs/tools';
 import PinchZoomTool from './PinchZoomTool';
+import SoftWindowLevelTool, { SoftWindowLevelPrimaryTool } from './SoftWindowLevelTool';
 
 const { MouseBindings, KeyboardBindings } = ToolEnums;
 
@@ -22,7 +22,7 @@ export const MPR_GROUP = 'dv-mpr';
 
 /** 좌클릭(Primary)에 할당 가능한 도구들 */
 export const PRIMARY_TOOLS = {
-  WindowLevel: WindowLevelTool.toolName,
+  WindowLevel: SoftWindowLevelPrimaryTool.toolName,
   Pan: PanTool.toolName,
   Zoom: ZoomTool.toolName,
   Scroll: StackScrollTool.toolName,
@@ -50,13 +50,15 @@ const ANNOTATION_TOOLS = [
  *  - 터치: 1손가락 = 선택 도구, 2손가락 = 핀치 줌+팬
  */
 function baseBindings(group, { mpr = false } = {}) {
-  group.addTool(WindowLevelTool.toolName);
+  group.addTool(SoftWindowLevelPrimaryTool.toolName);
   group.addTool(PanTool.toolName);
   group.addTool(ZoomTool.toolName, { minZoomScale: 0.05, maxZoomScale: 40 });
   group.addTool(StackScrollTool.toolName, { loop: false });
   ANNOTATION_TOOLS.forEach((t) => group.addTool(t));
 
-  group.setToolActive(WindowLevelTool.toolName, {
+  // 우클릭 드래그 W/L — 감도 커브를 입힌 도구를 쓴다 (데스크톱과 같은 조작감)
+  group.addTool(SoftWindowLevelTool.toolName);
+  group.setToolActive(SoftWindowLevelTool.toolName, {
     bindings: [{ mouseButton: MouseBindings.Secondary }],
   });
   group.setToolActive(PanTool.toolName, {

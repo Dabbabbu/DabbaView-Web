@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Enums, volumeLoader, setVolumesForViewports, cache } from '@cornerstonejs/core';
 import { getEngine } from '../cornerstone/init';
 import { getMprGroup } from '../cornerstone/tools';
-import { MPR_VIEWPORT_IDS } from '../cornerstone/actions';
+import { MPR_VIEWPORT_IDS, attachWlDoubleClick } from '../cornerstone/actions';
 import { buildOverlay } from '../cornerstone/overlay';
 import { useStore, getSeries } from '../store/useStore';
 import ViewportOverlay from './ViewportOverlay';
@@ -59,10 +59,12 @@ export default function MprView() {
       EVENTS.forEach((e) => el.addEventListener(e, update));
       const noMenu = (e) => e.preventDefault();
       el.addEventListener('contextmenu', noMenu);
+      const detachDbl = attachWlDoubleClick(el.parentElement, i); // 더블클릭 = 원본 W/L
       return () => {
         cancelAnimationFrame(raf);
         EVENTS.forEach((e) => el.removeEventListener(e, update));
         el.removeEventListener('contextmenu', noMenu);
+        detachDbl();
       };
     });
 

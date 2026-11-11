@@ -3,6 +3,8 @@ import { utilities as toolUtils, annotation } from '@cornerstonejs/tools';
 import { RENDERING_ENGINE_ID } from './init';
 import { useStore, getSeries } from '../store/useStore';
 import { getPhases, phaseWhere } from '../dicom/phases';
+import { instanceMeta } from '../dicom/loader';
+import { WlDrag } from './wlFeel';
 
 export const WINDOW_PRESETS = [
   { name: 'Brain', center: 40, width: 80, key: '1' },
@@ -47,11 +49,76 @@ export function applyWindow(width, center, applyToAll = false) {
   });
 }
 
-export function resetWindow() {
-  const vp = getActiveViewport();
-  if (!vp) return;
-  vp.resetProperties?.();
-  vp.render();
+/** 여러 값(태그에 1\2처럼 들어오는 경우)에서 첫 숫자만 */
+function firstNumber(v) {
+  const x = Array.isArray(v) ? v[0] : v;
+  const n = typeof x === 'string' ? parseFloat(x) : x;
+  return Number.isFinite(n) ? n : null;
+}
+
+/** 이 칸이 보고 있는 시리즈의 DICOM 메타 (MPR이면 MPR로 띄운 시리즈) */
+function seriesMetaFor(vp) {
+  const st = useStore.getState();
+  const key = vp?.id?.startsWith('stack-') ? st.viewportSeries[Number(vp.id.slice(6))] : st.mprSeriesKey;
+  return getSeries(key)?.meta || null;
+}
+
+/** 원본 DICOM 태그의 Window Width/Center → [W, L] (태그가 없으면 null)
+ *
+ * 1순위는 지금 보고 있는 그 장의 태그(슬라이스마다 다를 수 있다),
+ * 2순위는 시리즈 첫 장의 태그다. 둘 다 없으면 null.
+ */
+export function sourceWindowOf(vp) {
+  if (!vp) return null;
+  for (const m of [vp.csImage, instanceMeta.get(vp.getCurrentImageId?.()), seriesMetaFor(vp)]) {
+    if (!m) continue;
+    const width = firstNumber(m.windowWidth);
+    const center = firstNumber(m.windowCenter);
+    if (width > 0 && center !== null) return [width, center];
+  }
+  return null;
+}
+
+/** 더블클릭으로 원본 W/L을 되돌려도 되는 도구 (측정 도구는 더블클릭이 '선 끝내기'다) */
+export const WL_DBLCLICK_TOOLS = ['WindowLevel', 'Pan', 'Zoom', 'Scroll'];
+
+/** 영상 칸 더블클릭 = 원본 W/L로 되돌리기
+ *
+ * Cornerstone은 끌고 난 바로 다음 더블클릭을 한 번 삼킨다(mouseDoubleClickIgnoreListener).
+ * 그래서 영상 요소보다 먼저 받도록 바깥 칸의 '캡처' 단계에 붙인다.
+ */
+export function attachWlDoubleClick(cell, index) {
+  if (!cell) return () => {};
+  const onDbl = () => {
+    const st = useStore.getState();
+    if (!WL_DBLCLICK_TOOLS.includes(st.activeTool)) return; // 측정 도구는 더블클릭이 '선 끝내기'
+    st.setActiveIndex(index);
+    resetWindow();
+  };
+  cell.addEventListener('dblclick', onDbl, true);
+  return () => cell.removeEventListener('dblclick', onDbl, true);
+}
+
+/** 원본(DICOM 태그)의 W/L로 되돌린다 — 반전·확대는 건드리지 않는다 → [W, L] */
+export function resetWindow(applyToAll) {
+  const targets = allTargets(applyToAll === true);
+  let shown = null;
+  targets.forEach((vp) => {
+    const source = sourceWindowOf(vp);
+    if (source) {
+      const { VOILUTFunction } = vp.getProperties?.() || {};
+      vp.setProperties({ voiRange: utilities.windowLevel.toLowHighRange(source[0], source[1], VOILUTFunction) });
+      shown = shown || source;
+    } else {
+      vp.resetProperties?.(); // 태그가 없는 영상(JPEG·NIfTI 등)은 값 범위에 맞춘다
+    }
+    vp.render();
+  });
+  if (targets.length) {
+    const st = useStore.getState();
+    st.showToast(shown ? `원본 W/L로 되돌림 — W ${Math.round(shown[0])} L ${Math.round(shown[1])}` : '원본 W/L 태그가 없어 값 범위에 맞췄습니다');
+  }
+  return shown;
 }
 
 export function toggleInvert() {
@@ -136,14 +203,24 @@ export function fitToWindow() {
   vp.render();
 }
 
-/** 활성 칸 W/L을 끌어서 조절 — 좌우 = Width, 위아래 = Level (데스크톱 우클릭 드래그와 같은 감도) → [W, L] */
+/** 활성 칸 W/L을 끌어서 조절 — 좌우 = Width, 위아래 = Level (데스크톱 우클릭 드래그와 같은 감도) → [W, L]
+ *
+ * 모바일 드래그 패드용. 우클릭 드래그(SoftWindowLevelTool)와 같은 비선형 커브를 쓴다.
+ */
+let wlPad = null;
 export function adjustWindowBy(dx, dy) {
   const vp = getActiveViewport();
   const range = vp?.getProperties?.().voiRange;
   if (!range) return null;
   const { windowWidth, windowCenter } = utilities.windowLevel.toWindowLevel(range.lower, range.upper);
-  const width = Math.max(1, windowWidth + dx * 4);
-  const center = windowCenter + dy * 4;
+  const now = Date.now();
+  if (!wlPad || now - wlPad.lastAt > 250) {
+    wlPad = new WlDrag(windowWidth, windowCenter);
+  } else {
+    wlPad.width = Math.max(1, windowWidth);
+    wlPad.center = windowCenter;
+  }
+  const [width, center] = wlPad.move(dx, dy, now);
   vp.setProperties({ voiRange: utilities.windowLevel.toLowHighRange(width, center) });
   vp.render();
   return [width, center];
