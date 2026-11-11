@@ -11,6 +11,9 @@ import {
   resetView,
   fitToWindow,
   clearAnnotations,
+  undoAnnotation,
+  redoAnnotation,
+  deleteSelectedAnnotations,
   playCine,
   stopCine,
   stepSlice,
@@ -196,7 +199,10 @@ export function buildCommands({ onOpenFiles, onOpenFolder, onAddFiles, onAddFold
       keywords: `확대 축소 줌 zoom ${KW.window} 조절 막대 패드 슬라이더 pad`,
       run: () => st().toggleDragPads(),
     },
-    { label: '측정 모두 지우기', path: '측정', keywords: `${KW.measure} 지우기 삭제 clear delete annotation 주석`, run: clearAnnotations },
+    { label: '측정 모두 지우기', path: '측정', shortcut: 'Ctrl+E', keywords: `${KW.measure} 지우기 삭제 clear delete annotation 주석`, run: clearAnnotations },
+    { label: '되돌리기 (측정)', path: '측정', shortcut: 'Ctrl+Z', keywords: `${KW.measure} 되돌리기 undo 취소 실행취소`, run: undoAnnotation },
+    { label: '다시 되돌리기 (측정)', path: '측정', shortcut: 'Ctrl+Y', keywords: `${KW.measure} 다시 redo 재실행`, run: redoAnnotation },
+    { label: '고른 측정 삭제', path: '측정', shortcut: 'Delete', keywords: `${KW.measure} 선택 삭제 delete 하나만`, run: deleteSelectedAnnotations },
   ];
   return list;
 }

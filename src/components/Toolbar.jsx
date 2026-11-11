@@ -15,6 +15,10 @@ import {
   resetView,
   fitToWindow,
   clearAnnotations,
+  undoAnnotation,
+  redoAnnotation,
+  deleteSelectedAnnotations,
+  annotationStatus,
   playCine,
   stopCine,
   selectPhase,
@@ -33,6 +37,47 @@ export const TOOLS = [
   { key: 'Probe', icon: 'probe', label: 'Probe', title: '픽셀 값' },
   { key: 'Cursor3D', icon: 'cursor3d', label: '3D', title: '3D 커서 — 클릭한 지점의 환자 좌표(L/P/S)와 값, 다른 칸에 초록 커서 표시' },
 ];
+
+/** 우클릭하면 측정 편집 메뉴가 뜨는 그리기 도구들 */
+const DRAW_TOOLS = ['Length', 'Angle', 'Rectangle', 'Ellipse', 'Freehand', 'Probe'];
+
+const CTX_MENU_H = 190; // 메뉴 높이(어림) — 화면 밖으로 넘어가지 않게 자리를 잡을 때 쓴다
+
+/** 그리기 도구 아이콘 우클릭 메뉴 — 전체 지우기 · 되돌리기 · 다시 되돌리기 · 선택 삭제 */
+function DrawContextMenu({ at, onClose }) {
+  const ref = useRef(null);
+  useClickOutside(ref, onClose);
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const st = annotationStatus();
+  const run = (fn) => () => {
+    fn();
+    onClose();
+  };
+  const left = Math.max(4, Math.min(at.x, window.innerWidth - 230));
+  const top = Math.max(4, Math.min(at.y, window.innerHeight - CTX_MENU_H));
+  return (
+    <div className="menu ctxmenu" ref={ref} style={{ left, top }}>
+      <div className="ctxmenu-head">측정 {st.total}개{st.selected ? ` · ${st.selected}개 고름` : ''}</div>
+      <button onClick={run(undoAnnotation)} disabled={!st.canUndo}>
+        <Icon name="undo" size={16} /> 되돌리기 <span className="menu-shortcut">Ctrl+Z</span>
+      </button>
+      <button onClick={run(redoAnnotation)} disabled={!st.canRedo}>
+        <Icon name="redo" size={16} /> 다시 되돌리기 <span className="menu-shortcut">Ctrl+Y</span>
+      </button>
+      <div className="menu-sep" />
+      <button onClick={run(deleteSelectedAnnotations)} disabled={!st.selected}>
+        <Icon name="close" size={16} /> 선택 삭제 <span className="menu-shortcut">Delete</span>
+      </button>
+      <button onClick={run(clearAnnotations)} disabled={!st.total}>
+        <Icon name="trash" size={16} /> 전체 지우기 <span className="menu-shortcut">Ctrl+E</span>
+      </button>
+    </div>
+  );
+}
 
 /** 활성 칸의 시리즈(없으면 MPR 가능한 첫 시리즈)를 MPR로 */
 export function openMprForActive() {
@@ -223,6 +268,7 @@ export function ToolBar() {
   const activeIndex = useStore((s) => s.activeIndex);
   const cine = useStore((s) => s.cine[s.activeIndex]) || { playing: false, fps: 15 };
   const [menu, setMenu] = useState(null);
+  const [ctx, setCtx] = useState(null); // 그리기 아이콘 우클릭 메뉴 위치
   const ref = useRef(null);
   useClickOutside(ref, () => setMenu(null));
   const st = useStore.getState;
@@ -249,7 +295,17 @@ export function ToolBar() {
     <nav className="toolbar" ref={ref}>
       <div className="tgroup">
         {tools.map((t) => (
-          <button key={t.key} className={`tool ${activeTool === t.key ? 'on' : ''}`} title={t.title} onClick={() => st().setActiveTool(t.key)}>
+          <button
+            key={t.key}
+            className={`tool ${activeTool === t.key ? 'on' : ''}`}
+            title={DRAW_TOOLS.includes(t.key) ? `${t.title}\n(우클릭: 지우기 · 되돌리기)` : t.title}
+            onClick={() => st().setActiveTool(t.key)}
+            onContextMenu={(e) => {
+              if (!DRAW_TOOLS.includes(t.key)) return;
+              e.preventDefault();
+              setCtx({ x: e.clientX, y: e.clientY });
+            }}
+          >
             <Icon name={t.icon} size={20} />
             <span>{t.label}</span>
           </button>
@@ -360,11 +416,20 @@ export function ToolBar() {
           <Icon name="overlay" size={20} />
           <span>정보</span>
         </button>
-        <button className="tool" title="측정 모두 지우기" onClick={clearAnnotations}>
+        <button
+          className="tool"
+          title={'측정 모두 지우기 (Ctrl+E)\n우클릭: 되돌리기 · 선택 삭제'}
+          onClick={clearAnnotations}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setCtx({ x: e.clientX, y: e.clientY });
+          }}
+        >
           <Icon name="trash" size={20} />
           <span>지우기</span>
         </button>
       </div>
+      {ctx && <DrawContextMenu at={ctx} onClose={() => setCtx(null)} />}
     </nav>
   );
 }

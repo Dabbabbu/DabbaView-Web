@@ -1,5 +1,5 @@
 import { utilities, Enums, getRenderingEngine } from '@cornerstonejs/core';
-import { utilities as toolUtils, annotation } from '@cornerstonejs/tools';
+import { utilities as toolUtils, annotation, AnnotationTool } from '@cornerstonejs/tools';
 import { RENDERING_ENGINE_ID } from './init';
 import { useStore, getSeries } from '../store/useStore';
 import { getPhases, phaseWhere } from '../dicom/phases';
@@ -322,9 +322,96 @@ export function chordGain(pxPerMs) {
   return Math.min(12, 1 + Math.max(0, pxPerMs - 0.25) * 5);
 }
 
-export function clearAnnotations() {
-  annotation.state.removeAllAnnotations();
+// ─────────────── 측정 · 주석 ───────────────
+
+/** Cornerstone이 들고 있는 되돌리기 기록 (측정을 그리거나 옮기면 저절로 쌓인다) */
+const annHistory = () => utilities.HistoryMemo?.DefaultHistoryMemo || null;
+
+/** 그 측정이 그려진 칸의 요소 (못 찾으면 활성 칸) */
+function elementForAnnotation(ann) {
+  try {
+    const vp = toolUtils.getViewportForAnnotation?.(ann);
+    if (vp?.element) return vp.element;
+  } catch {
+    /* 그 측정의 칸이 지금 안 보이면 활성 칸으로 */
+  }
+  return getActiveViewport()?.element || null;
+}
+
+/** 되돌릴 수 있게 기록해 두고 지운다. 여러 개는 한 번의 Ctrl+Z로 되살아나게 묶는다 */
+function eraseAnnotations(uids) {
+  const list = (uids || []).filter(Boolean);
+  if (!list.length) return 0;
+  const history = annHistory();
+  let removed = 0;
+  history?.startGroupRecording?.();
+  try {
+    list.forEach((uid) => {
+      const ann = annotation.state.getAnnotation(uid);
+      if (!ann) return;
+      annotation.selection.deselectAnnotation(uid);
+      AnnotationTool.createAnnotationMemo(elementForAnnotation(ann), ann, { deleting: true });
+      annotation.state.removeAnnotation(uid);
+      removed += 1;
+    });
+  } finally {
+    history?.endGroupRecording?.();
+  }
   getEngine()?.render();
+  return removed;
+}
+
+/** 측정 모두 지우기 (Ctrl+E) — Ctrl+Z로 한 번에 되살릴 수 있다 */
+export function clearAnnotations() {
+  const all = annotation.state.getAllAnnotations?.() || [];
+  const n = eraseAnnotations(all.map((a) => a.annotationUID));
+  useStore.getState().showToast(n ? `측정 ${n}개를 지웠습니다 — Ctrl+Z로 되돌리기` : '지울 측정이 없습니다');
+  return n;
+}
+
+/** 고른 측정만 삭제 (Delete) — 측정을 한 번 눌러 고른 뒤 */
+export function deleteSelectedAnnotations() {
+  const uids = [...(annotation.selection.getAnnotationsSelected?.() || [])];
+  const n = eraseAnnotations(uids);
+  useStore
+    .getState()
+    .showToast(n ? `측정 ${n}개를 삭제했습니다 — Ctrl+Z로 되돌리기` : '고른 측정이 없습니다 — 측정을 한 번 눌러 고른 뒤 Delete');
+  return n;
+}
+
+/** 되돌리기 (Ctrl+Z) — 그리기 · 옮기기 · 지우기 모두 */
+export function undoAnnotation() {
+  const history = annHistory();
+  if (!history?.canUndo) {
+    useStore.getState().showToast('되돌릴 것이 없습니다');
+    return false;
+  }
+  history.undo();
+  getEngine()?.render();
+  return true;
+}
+
+/** 다시 되돌리기 (Ctrl+Y / Ctrl+Shift+Z) */
+export function redoAnnotation() {
+  const history = annHistory();
+  if (!history?.canRedo) {
+    useStore.getState().showToast('다시 되돌릴 것이 없습니다');
+    return false;
+  }
+  history.redo();
+  getEngine()?.render();
+  return true;
+}
+
+/** 측정이 몇 개 있는지 · 되돌릴 수 있는지 (메뉴에서 쓸 상태) */
+export function annotationStatus() {
+  const history = annHistory();
+  return {
+    total: (annotation.state.getAllAnnotations?.() || []).length,
+    selected: (annotation.selection.getAnnotationsSelected?.() || []).length,
+    canUndo: !!history?.canUndo,
+    canRedo: !!history?.canRedo,
+  };
 }
 
 // ─────────────── 시네 ───────────────

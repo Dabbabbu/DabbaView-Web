@@ -15,6 +15,10 @@ import {
   stepSlice,
   playCine,
   stopCine,
+  clearAnnotations,
+  undoAnnotation,
+  redoAnnotation,
+  deleteSelectedAnnotations,
 } from './cornerstone/actions';
 import { useStore, LAYOUTS, getSeries } from './store/useStore';
 import { folderLabel } from './dicom/source';
@@ -193,7 +197,24 @@ export default function App() {
       if (st.dialog) return;
       const k = e.key;
       const toolKeys = { w: 'WindowLevel', p: 'Pan', z: 'Zoom', s: 'Scroll', l: 'Length', a: 'Angle', b: 'Rectangle', e: 'Ellipse', d: 'Freehand' };
+      // ── 측정 편집: Ctrl(⌘)+E 모두 지우기 · Ctrl+Z 되돌리기 · Ctrl+Y(⌘+Shift+Z) 다시 되돌리기 ──
+      const mod = (e.ctrlKey || e.metaKey) && !e.altKey;
+      if (mod) {
+        const code = e.code;
+        if (!e.shiftKey && code === 'KeyE') clearAnnotations();
+        else if (!e.shiftKey && code === 'KeyZ') undoAnnotation();
+        else if ((!e.shiftKey && code === 'KeyY') || (e.shiftKey && code === 'KeyZ')) redoAnnotation();
+        else return;
+        e.preventDefault();
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // Delete / Backspace: 고른 측정 삭제
+      if (k === 'Delete' || k === 'Backspace') {
+        deleteSelectedAnnotations();
+        e.preventDefault();
+        return;
+      }
       // ↑↓ 슬라이스 (위상 영상은 위상을 고정한 채 위치), ←→ 위상 (위상 영상만)
       if (k === 'ArrowUp' || k === 'ArrowDown') stepSlice('position', k === 'ArrowUp' ? -1 : 1);
       else if (k === 'ArrowLeft' || k === 'ArrowRight') stepSlice('phase', k === 'ArrowLeft' ? -1 : 1);
