@@ -1278,7 +1278,22 @@ code {
   color: #fff;
 }
 .drag-pad-icon {
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
+}
+/* 끌지 않고 한 번 누르는 칸 (원본 W/L) — 폭은 글자에 맞춘다 */
+.drag-pad.tap {
+  width: auto;
+  padding: 0 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.drag-pad.tap:active {
+  background: var(--accent-2);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 /* 헤더 오른쪽 🔍 기능 검색 칸 (검색창 모양) */
