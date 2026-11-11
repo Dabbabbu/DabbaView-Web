@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { DEFAULT_COLOR, DEFAULT_WIDTH, DRAW_COLORS, clampWidth } from '../cornerstone/drawStyle';
+import { ROI_STAT_ORDER, loadRoiStats, saveRoiStats } from '../cornerstone/roiStats';
 import {
   AUTO,
   DEFAULT_ACTIVE,
@@ -223,6 +224,22 @@ export const useStore = create((set, get) => ({
     writeJson('dv.drawWidth', drawWidth);
     set({ drawWidth });
   },
+  // ROI 상자에 보일 값 (면적 · 평균 · 최대 · 최소 · 표준편차 …)
+  roiStats: loadRoiStats(),
+  toggleRoiStat(key) {
+    const now = new Set(get().roiStats);
+    if (now.has(key)) now.delete(key);
+    else now.add(key);
+    const roiStats = ROI_STAT_ORDER.filter((f) => now.has(f));
+    saveRoiStats(roiStats);
+    set({ roiStats });
+  },
+  setRoiStats(fields) {
+    const roiStats = ROI_STAT_ORDER.filter((f) => fields.includes(f));
+    saveRoiStats(roiStats);
+    set({ roiStats });
+  },
+
   nudgeDrawWidth(step) {
     get().setDrawWidth(get().drawWidth + step);
     return clampWidth(get().drawWidth);

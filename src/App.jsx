@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { initCornerstone } from './cornerstone/init';
+import { initCornerstone, getEngine } from './cornerstone/init';
 import { getStackGroup, getMprGroup, setPrimaryTool } from './cornerstone/tools';
 import {
   refreshAfterHidden,
@@ -22,6 +22,7 @@ import {
 } from './cornerstone/actions';
 import { useStore, LAYOUTS, getSeries } from './store/useStore';
 import { applyDrawStyle, drawCursor, watchNewAnnotations, colorLabel, DRAW_TOOLS } from './cornerstone/drawStyle';
+import { applyRoiStats } from './cornerstone/roiStats';
 import { folderLabel } from './dicom/source';
 import { filesFromDataTransfer, filesFromInput } from './dicom/loader';
 import { ingestFiles } from './dicom/ingest';
@@ -70,6 +71,7 @@ export default function App() {
   const activeKey = useStore((s) => s.viewportSeries[s.activeIndex]);
   const drawColor = useStore((s) => s.drawColor);
   const drawWidth = useStore((s) => s.drawWidth);
+  const roiStats = useStore((s) => s.roiStats);
 
   // 탭 제목에 지금 보는 시리즈의 폴더 이름 (어디서 왔는지)
   useEffect(() => {
@@ -106,6 +108,13 @@ export default function App() {
     document.body.classList.toggle('drawing', drawing);
     document.body.style.setProperty('--draw-cursor', drawing ? drawCursor(drawColor, drawWidth) : 'crosshair');
   }, [ready, drawColor, drawWidth, activeTool]);
+
+  // ROI 상자에 보일 값 (Area · Avg · Max · Min · SD …)
+  useEffect(() => {
+    if (!ready) return;
+    applyRoiStats([getStackGroup(), getMprGroup()], roiStats);
+    getEngine()?.render();
+  }, [ready, roiStats]);
 
   // 새로 그린 측정에 그때의 색·굵기를 찍어 둔다 (나중에 색을 바꿔도 옛 측정은 그대로)
   useEffect(() => {

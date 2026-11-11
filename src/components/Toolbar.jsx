@@ -3,6 +3,7 @@ import { useStore, getSeries } from '../store/useStore';
 import { getPhases } from '../dicom/phases';
 import { Icon } from './Icons';
 import { DRAW_TOOLS, DRAW_COLORS, colorCss as colorCssOf, MIN_WIDTH, MAX_WIDTH } from '../cornerstone/drawStyle';
+import { ROI_STAT_ORDER, ROI_STAT_LABELS, ROI_STAT_DEFAULT } from '../cornerstone/roiStats';
 import { AUTO, layoutLabel } from '../store/layouts';
 import { APP_TITLE, APP_VERSION } from '../version';
 import { alignToActive } from '../cornerstone/sync';
@@ -39,7 +40,7 @@ export const TOOLS = [
   { key: 'Cursor3D', icon: 'cursor3d', label: '3D', title: '3D 커서 — 클릭한 지점의 환자 좌표(L/P/S)와 값, 다른 칸에 초록 커서 표시' },
 ];
 
-const CTX_MENU_H = 290; // 메뉴 높이(어림) — 화면 밖으로 넘어가지 않게 자리를 잡을 때 쓴다
+const CTX_MENU_H = 420; // 메뉴 높이(어림) — 화면 밖으로 넘어가지 않게 자리를 잡을 때 쓴다
 
 /** 그리기 도구 아이콘 우클릭 메뉴 — 전체 지우기 · 되돌리기 · 다시 되돌리기 · 선택 삭제 */
 function DrawContextMenu({ at, onClose }) {
@@ -48,6 +49,9 @@ function DrawContextMenu({ at, onClose }) {
   const drawWidth = useStore((s) => s.drawWidth);
   const setDrawColor = useStore((s) => s.setDrawColor);
   const setDrawWidth = useStore((s) => s.setDrawWidth);
+  const roiStats = useStore((s) => s.roiStats);
+  const toggleRoiStat = useStore((s) => s.toggleRoiStat);
+  const setRoiStats = useStore((s) => s.setRoiStats);
   useClickOutside(ref, onClose);
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -95,6 +99,24 @@ function DrawContextMenu({ at, onClose }) {
       </button>
       <button onClick={run(redoAnnotation)} disabled={!st.canRedo}>
         <Icon name="redo" size={16} /> 다시 되돌리기 <span className="menu-shortcut">Ctrl+Y</span>
+      </button>
+      <div className="menu-sep" />
+      <div className="ctxmenu-head">ROI에 보일 값</div>
+      <div className="swatches">
+        {ROI_STAT_ORDER.map((key) => (
+          <button
+            key={key}
+            className={`swatch ${roiStats.includes(key) ? 'on' : ''}`}
+            style={{ '--swatch': roiStats.includes(key) ? 'var(--accent)' : 'transparent' }}
+            onClick={() => toggleRoiStat(key)}
+          >
+            <span />
+            {ROI_STAT_LABELS[key].split(' (')[0]}
+          </button>
+        ))}
+      </div>
+      <button onClick={() => setRoiStats(ROI_STAT_DEFAULT)}>
+        기본값으로 (면적 · 평균 · 최대 · 최소 · 표준편차)
       </button>
       <div className="menu-sep" />
       <button onClick={run(deleteSelectedAnnotations)} disabled={!st.selected}>
