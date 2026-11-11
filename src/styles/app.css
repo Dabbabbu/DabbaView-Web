@@ -1400,6 +1400,36 @@ body.drawing .viewport-element {
   border-color: var(--accent);
   color: #fff;
 }
+/* ✏️ 그리기 칸 — 지금 쓰는 도구면 파랗게, 오른쪽 점은 지금 색·굵기 */
+.drawpad-wrap {
+  position: relative;
+  display: flex;
+}
+.drag-pad.tap.on {
+  background: rgba(58, 160, 255, 0.16);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.draw-dot {
+  width: var(--w);
+  height: var(--w);
+  flex: none;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+/* 도구 목록은 칸 바로 위에 */
+.drawpad-menu {
+  position: fixed;
+  top: auto;
+  right: auto;
+  min-width: 170px;
+}
+.drawpad-menu button.on {
+  background: rgba(58, 160, 255, 0.16);
+  color: var(--accent);
+}
 
 /* 헤더 오른쪽 🔍 기능 검색 칸 (검색창 모양) */
 .find-box {

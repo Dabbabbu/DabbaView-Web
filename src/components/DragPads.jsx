@@ -1,12 +1,16 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { adjustWindowBy, zoomByDrag, fitToWindow, resetWindow } from '../cornerstone/actions';
 import { Icon } from './Icons';
+import { useStore } from '../store/useStore';
+import { DRAW_TOOLS, DRAW_COLORS, colorCss } from '../cornerstone/drawStyle';
+import { TOOLS } from './Toolbar';
 
 /**
  * 영상 아래 Zoom · W/L 조절 칸 (데스크톱 DabbaView 상태바와 같음) — 영상을 가리지 않고 끌어서 조절
  *  Zoom: 누른 채 위로 = 확대, 아래로 = 축소 · 두 번 클릭 = 화면 맞춤
  *  W/L : 좌우 = Width, 위아래 = Level · 두 번 클릭 = 원본 W/L
  *  원본: 한 번 눌러 DICOM 태그의 Window Center/Width로 되돌리기
+ *  그리기: 눌러서 측정 도구 고르기 (쓰던 도구가 켜져 있으면 눌러서 끄기)
  */
 function Pad({ icon, label, hint, cursor, onDrag, onDouble, title }) {
   const last = useRef(null);
@@ -59,6 +63,86 @@ function TapPad({ icon, label, title, onTap }) {
   );
 }
 
+/** ✏️ 그리기 — 누르면 측정 도구 목록, 이미 그리는 중이면 눌러서 끄기 */
+function DrawPad() {
+  const activeTool = useStore((s) => s.activeTool);
+  const drawColor = useStore((s) => s.drawColor);
+  const drawWidth = useStore((s) => s.drawWidth);
+  const setActiveTool = useStore((s) => s.setActiveTool);
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const [at, setAt] = useState(null);
+  const drawing = DRAW_TOOLS.includes(activeTool);
+  const lastDraw = useRef('Length');
+  if (drawing) lastDraw.current = activeTool;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => {
+      if (!ref.current?.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', close);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const tools = TOOLS.filter((t) => DRAW_TOOLS.includes(t.key));
+  const current = tools.find((t) => t.key === activeTool);
+  const toggle = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setAt({ left: r.left, bottom: window.innerHeight - r.top + 6 });
+    setOpen((v) => !v);
+  };
+  const choose = (key) => {
+    setActiveTool(key);
+    setOpen(false);
+  };
+
+  return (
+    <div className="drawpad-wrap" ref={ref}>
+      <button
+        type="button"
+        className={`drag-pad tap ${drawing ? 'on' : ''}`}
+        title={
+          drawing
+            ? `그리는 중: ${current?.label || ''} — 눌러서 도구를 바꾸거나 끕니다\n색 ${
+                DRAW_COLORS.find((c) => c.key === drawColor)?.label
+              } · 굵기 ${drawWidth} (Ctrl+R/B/G/W · Ctrl+휠)`
+            : '그리기 도구 고르기 — 거리 · 각도 · 사각 · 타원 · 자유 · Probe'
+        }
+        onClick={toggle}
+      >
+        <span className="drag-pad-icon">
+          <Icon name={drawing ? current?.icon || 'freehand' : 'freehand'} size={14} />
+        </span>
+        <span className="drag-pad-text">{drawing ? current?.label || '그리기' : '그리기'}</span>
+        <span className="draw-dot" style={{ '--swatch': colorCss(drawColor), '--w': `${4 + drawWidth}px` }} />
+      </button>
+      {open && at && (
+        <div className="menu drawpad-menu" style={{ left: at.left, bottom: at.bottom }}>
+          {tools.map((t) => (
+            <button key={t.key} className={activeTool === t.key ? 'on' : ''} onClick={() => choose(t.key)}>
+              <Icon name={t.icon} size={16} /> {t.label}
+            </button>
+          ))}
+          {drawing && (
+            <>
+              <div className="menu-sep" />
+              <button onClick={() => choose('WindowLevel')}>
+                <Icon name="wl" size={16} /> 그리기 끄기 (W/L로)
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DragPads() {
   return (
     <footer className="drag-pads hide-sm" title="영상을 가리지 않는 조절 칸 — 누른 채 끌기">
@@ -92,6 +176,7 @@ export default function DragPads() {
         title={'DICOM 원본의 Window Center/Width로 되돌리기\n영상을 더블클릭하거나 0 키를 눌러도 됩니다'}
         onTap={() => resetWindow()}
       />
+      <DrawPad />
     </footer>
   );
 }
