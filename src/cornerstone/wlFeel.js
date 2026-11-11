@@ -1,7 +1,7 @@
 // W/L 조작감 — 데스크톱 DabbaView(mouse_feel.py)의 비선형 감도 커브를 그대로 옮긴 것
 //
 //  - 천천히 끌면 0.4배(정밀), 보통이면 1배, 빠르게 끌면 최대 2.5배
-//  - 한 픽셀이 바꾸는 값은 '드래그를 시작할 때의 Window Width / 100'
+//  - 한 픽셀이 바꾸는 값은 '드래그를 시작할 때의 Window Width / 250' (0.4%)
 //    (드래그 도중에 다시 재지 않아야 Width가 커질수록 더 빨리 커지는 복리가 생기지 않는다)
 //  - 좁은 창에서 꿈쩍 않거나 넓은 창에서 튀지 않게 영상 값 범위의 0.02%~2%로 묶는다
 
@@ -10,6 +10,7 @@ const SLOW_SPEED = 0.05; // px/ms — 이보다 느리면 SLOW_GAIN
 const NORMAL_SPEED = 0.45; // px/ms — 보통 드래그 = 1배
 const FAST_SPEED = 2.0; // px/ms — 이보다 빠르면 최대 가속
 const MAX_EXTRA = 1.5; // 가속 100%일 때 더해지는 최대 배율 (1 + 1.5 = 2.5배)
+const WL_PER_PX = 250; // 한 픽셀 = 지금 Width의 1/250 — 숫자가 클수록 둔감
 
 const smoothstep = (t) => {
   const x = Math.max(0, Math.min(1, t));
@@ -29,9 +30,13 @@ export function speedGain(speed, accel = 100) {
   return 1 + MAX_EXTRA * a * smoothstep((v - NORMAL_SPEED) / (FAST_SPEED - NORMAL_SPEED));
 }
 
-/** 한 픽셀이 바꾸는 값 — 드래그 시작 시의 Width 기준 */
+/** 한 픽셀이 바꾸는 값 — 드래그 시작 시의 Width 기준
+ *
+ * 가로로 250px 끌면 Width가 두 배가 된다. 1/100이던 때는 100px 만에 두 배가 되어
+ * 심장 MRI처럼 Width가 1800쯤인 영상에서 한 픽셀에 18씩 뛰었다 (데스크톱과 같은 값).
+ */
 export function wlUnit(width, valueRange) {
-  let unit = Math.max(Number(width) || 0, 1e-6) / 100;
+  let unit = Math.max(Number(width) || 0, 1e-6) / WL_PER_PX;
   if (valueRange) {
     const span = Math.max(Number(valueRange) || 0, 1e-6);
     unit = Math.max(span * 0.0002, Math.min(span * 0.02, unit));
