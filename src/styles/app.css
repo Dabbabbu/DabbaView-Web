@@ -1189,6 +1189,35 @@ body.drawing .viewport-element {
 .phase-btn:hover {
   background: var(--bg-4);
 }
+/* 좁은 화면에서 글자가 한 글자씩 세로로 꺾여 줄이 높아지지 않게 — 줄이지 않고 옆으로 민다 */
+.phase-bar > * {
+  flex: none;
+  white-space: nowrap;
+}
+/* 지금 보이는 장의 슬라이스 · 위상 — 버튼 줄을 옆으로 밀어도 왼쪽에 붙어 있다 */
+.phase-now {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding: 3px 8px;
+  margin-left: -4px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  box-shadow: 6px 0 6px -2px var(--bg-2);
+  color: #ffd479;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* 지금 보이는 위상 (ALL로 넘겨 볼 때도 어느 위상인지) */
+.phase-btn.now {
+  border-color: #ffd479;
+  box-shadow: inset 0 0 0 1px #ffd479;
+  color: #ffd479;
+}
+.phase-btn.on.now {
+  color: #fff;
+}
 .phase-btn.on {
   background: var(--accent-2);
   border-color: var(--accent);

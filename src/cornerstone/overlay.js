@@ -1,6 +1,8 @@
 import { utilities, Enums } from '@cornerstonejs/core';
 import { instanceMeta } from '../dicom/loader';
 import { formatDate, formatTime, round } from '../dicom/meta';
+import { getPhases, phaseWhere } from '../dicom/phases';
+import { useStore, getSeries } from '../store/useStore';
 
 /** 뷰포트별 마지막 오버레이 텍스트 (캡처 시 그대로 그리기 위해 보관) */
 export const overlayCache = new Map();
@@ -106,11 +108,22 @@ export function buildOverlay(viewport, extra = {}) {
         .join('  ')
     : '';
 
+  // cine: 지금 장이 몇 번째 슬라이스 · 몇 번째 위상인지 (전체 순번만으로는 알 수 없다)
+  let cine = '';
+  if (isStack && imageId) {
+    const at = /^stack-(\d+)$/.exec(viewport.id || '');
+    const series = at ? getSeries(useStore.getState().viewportSeries[+at[1]]) : null;
+    const phases = series ? getPhases(series) : null;
+    const where = phases && phases.length > 1 ? phaseWhere(series, imageId) : null;
+    if (where) cine = `Sl: ${where[1] + 1}/${Math.max(...phases.map((ids) => ids.length))}   Ph: ${where[0] + 1}/${phases.length}`;
+  }
+
   const data = {
     topLeft: [m.institutionName, m.patientName, m.patientId && `ID: ${m.patientId}`, sexAge, m.studyDescription].filter(Boolean),
     topRight: [
       [formatDate(m.studyDate), formatTime(m.studyTime)].filter(Boolean).join(' '),
-      `Se: ${m.seriesNumber ?? '-'}   Im: ${index + 1}/${total}${m.frame ? ` (F${m.frame})` : ''}`,
+      // cine은 전체 순번(Im 243/330) 대신 슬라이스 · 위상으로 적는다 — 좁은 화면에서도 한 줄에 들어가게
+      `Se: ${m.seriesNumber ?? '-'}   ${cine || `Im: ${index + 1}/${total}${m.frame ? ` (F${m.frame})` : ''}`}`,
       isStack && m.sliceLocation !== undefined ? `Loc: ${round(m.sliceLocation)} mm` : '',
       isStack
         ? [m.sliceThickness !== undefined && `Thk ${round(m.sliceThickness)} mm`, m.columns && `${m.columns}×${m.rows}`].filter(Boolean).join('  ')

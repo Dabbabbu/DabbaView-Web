@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore, getSeries } from '../store/useStore';
-import { getPhases } from '../dicom/phases';
+import { getPhases, phaseWhere } from '../dicom/phases';
+import { getEngine } from '../cornerstone/init';
 import { Icon } from './Icons';
 import { DRAW_TOOLS, DRAW_COLORS, colorCss as colorCssOf, MIN_WIDTH, MAX_WIDTH } from '../cornerstone/drawStyle';
 import { SCRIBBLE_SHAPES } from '../cornerstone/ScribbleTool';
 import { ROI_STAT_ORDER, ROI_STAT_LABELS, ROI_STAT_DEFAULT } from '../cornerstone/roiStats';
 import { AUTO, layoutLabel } from '../store/layouts';
 import { APP_TITLE, APP_VERSION } from '../version';
-import { alignToActive } from '../cornerstone/sync';
+import { alignToActive, VIEWPORT_CHANGED } from '../cornerstone/sync';
 import {
   WINDOW_PRESETS,
   applyWindow,
@@ -25,6 +26,7 @@ import {
   playCine,
   stopCine,
   selectPhase,
+  stackViewportId,
 } from '../cornerstone/actions';
 
 export const TOOLS = [
@@ -521,22 +523,73 @@ function useClickOutside(ref, fn) {
   }, [ref, fn]);
 }
 
-/** Cine/다중 Phase 시리즈용 [1][2][3]…[ALL] 버튼 (활성 칸 기준) */
+/** Cine/다중 Phase 시리즈용 [1][2][3]…[ALL] 버튼 (활성 칸 기준)
+ *
+ *  영상을 넘길 때마다 지금 보이는 장이 몇 번째 슬라이스 · 몇 번째 위상인지 따라 적고,
+ *  그 위상 버튼에 테두리를 쳐서 보여 준다 (ALL로 볼 때도). 버튼을 누르면 그 위상만 본다.
+ */
 export function PhaseBar() {
   const activeIndex = useStore((s) => s.activeIndex);
   const mode = useStore((s) => s.mode);
   const activeSeries = useStore((s) => s.series.find((x) => x.key === s.viewportSeries[s.activeIndex]));
   const phase = useStore((s) => s.phaseByViewport[s.activeIndex] ?? null);
   const phases = mode === 'stack' && activeSeries ? getPhases(activeSeries) : null;
-  if (!phases || phases.length < 2) return null;
+  const shown = !!phases && phases.length >= 2;
+
+  // 지금 보이는 장 → [위상, 위치]. 슬라이스가 바뀔 때마다(휠 · 끌기 · 재생 · 막대) 다시 읽는다
+  const [where, setWhere] = useState(null);
+  useEffect(() => {
+    if (!shown) {
+      setWhere(null);
+      return undefined;
+    }
+    let raf = 0;
+    const read = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const vp = getEngine()?.getViewport(stackViewportId(activeIndex));
+        const next = vp?.getImageIds?.().length ? phaseWhere(activeSeries, vp.getCurrentImageId()) : null;
+        setWhere((prev) => (prev && next && prev[0] === next[0] && prev[1] === next[1] ? prev : next));
+      });
+    };
+    read();
+    const settle = setTimeout(read, 400);   // 시리즈를 막 바꾼 직후에는 스택이 아직 안 올라와 있다
+    window.addEventListener(VIEWPORT_CHANGED, read);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(settle);
+      window.removeEventListener(VIEWPORT_CHANGED, read);
+    };
+  }, [shown, activeIndex, activeSeries, phase]);
+
+  // 지금 위상 버튼이 화면 밖이면(폰에서는 버튼 줄이 옆으로 길다) 보이는 곳으로 민다
+  const barRef = useRef(null);
+  const nowPhase = where ? where[0] : null;
+  useEffect(() => {
+    const bar = barRef.current;
+    const btn = bar?.querySelector('.phase-btn.now');
+    if (!bar || !btn) return;
+    // 왼쪽에 붙어 있는 'Slice · Phase' 글자가 가리는 폭만큼은 보이는 곳으로 치지 않는다
+    const pinned = (bar.querySelector('.phase-now')?.offsetWidth || 0) + 12;
+    const left = btn.offsetLeft - bar.offsetLeft;
+    if (left < bar.scrollLeft + pinned || left + btn.offsetWidth > bar.scrollLeft + bar.clientWidth - 8) {
+      bar.scrollLeft = Math.max(0, left - pinned - (bar.clientWidth - pinned) / 2 + btn.offsetWidth / 2);
+    }
+  }, [nowPhase]);
+
+  if (!shown) return null;
+  const positions = Math.max(...phases.map((ids) => ids.length));
   return (
-    <div className="phase-bar">
+    <div className="phase-bar" ref={barRef}>
       <Icon name="phase" size={16} />
       <span className="muted small">Phase</span>
+      <span className="phase-now" title="지금 보이는 장의 슬라이스 위치 · 위상">
+        {where ? `Slice ${where[1] + 1}/${positions} · Phase ${where[0] + 1}/${phases.length}` : `${phases.length}개 위상 · 위상당 ${positions}장`}
+      </span>
       {phases.map((p, i) => (
         <button
           key={i}
-          className={`phase-btn ${phase === i ? 'on' : ''}`}
+          className={`phase-btn ${phase === i ? 'on' : ''} ${nowPhase === i ? 'now' : ''}`}
           title={`Phase ${i + 1} — ${p.length}장만 보기`}
           onClick={() => selectPhase(activeIndex, i)}
         >
@@ -546,9 +599,6 @@ export function PhaseBar() {
       <button className={`phase-btn ${phase === null ? 'on' : ''}`} title="전체 Phase" onClick={() => selectPhase(activeIndex, null)}>
         ALL
       </button>
-      <span className="muted small">
-        {phases.length}개 위상 · 위상당 {phases[0].length}장
-      </span>
     </div>
   );
 }
