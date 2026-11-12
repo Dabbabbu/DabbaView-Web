@@ -124,17 +124,6 @@ function orientationKey(iop) {
   return iop.map((v) => Math.round(v * 10) / 10).join(',');
 }
 
-/** 방향별로 나눈 묶음 크기들 → 나누는 게 오히려 해로운가 (장마다 방향이 다른 시리즈)
- *
- *  3면 로컬라이저는 방향 3개 안팎에 방향마다 여러 장(또는 1장씩 3장)이다. 방향이 그보다 훨씬 많거나,
- *  방향은 여럿인데 대부분이 한 장짜리면 '방향이 계속 바뀌는 한 시리즈'로 본다. */
-const MAX_ORIENTATION_GROUPS = 6;
-export function isScatteredOrientations(sizes) {
-  if (sizes.length <= 3) return false;
-  if (sizes.length > MAX_ORIENTATION_GROUPS) return true;
-  return sizes.filter((n) => n === 1).length * 2 >= sizes.length;
-}
-
 /** 묶음 안 영상이 모두 같은 방향인가 (MPR · 위치 정렬이 되려면) */
 function sameOrientation(group) {
   const first = orientationKey(group[0].meta.imageOrientationPatient);
@@ -151,21 +140,14 @@ function groupIntoSeries(parsed) {
 
   const result = [];
   for (const [uid, items] of bySeries) {
-    // 한 시리즈에 방향이 여러 개면 (3면 로컬라이저 등) 방향별로 나눈다
-    let byOri = new Map();
-    const put = (map, k, it) => {
-      if (!map.has(k)) map.set(k, []);
-      map.get(k).push(it);
-    };
+    // 한 시리즈(SeriesInstanceUID)는 한 장의 카드로 — 방향이 섞여 있어도 나누지 않는다 (데스크톱과 같게)
+    // 3면 로컬라이저 · GE iDrive처럼 장마다 방향이 다른 시리즈도 찍은 순서대로 한 번에 넘겨 본다.
+    // 멀티프레임 파일만 파일마다 따로 둔다 (한 파일이 이미 한 묶음이므로)
+    const byOri = new Map();
     for (const it of items) {
-      put(byOri, it.meta.numberOfFrames > 1 ? `mf-${it.imageId}` : orientationKey(it.meta.imageOrientationPatient), it);
-    }
-    // 단, 장마다 방향이 다른 시리즈(GE iDrive 같은 실시간 · 인터랙티브 촬영)는 나누면
-    // 한 장짜리 시리즈 수십 개로 흩어진다 → 나누지 않고 찍은 순서대로 한 시리즈로 둔다
-    if (isScatteredOrientations([...byOri].filter(([k]) => !k.startsWith('mf-')).map(([, g]) => g.length))) {
-      const merged = new Map();
-      for (const [k, group] of byOri) for (const it of group) put(merged, k.startsWith('mf-') ? k : 'mixed', it);
-      byOri = merged;
+      const k = it.meta.numberOfFrames > 1 ? `mf-${it.imageId}` : 'single';
+      if (!byOri.has(k)) byOri.set(k, []);
+      byOri.get(k).push(it);
     }
     const groups = [...byOri.values()];
     groups.forEach((group, gi) => {
