@@ -6,7 +6,6 @@ import {
   WindowLevelTool,
   PanTool,
   ZoomTool,
-  StackScrollTool,
   LengthTool,
   AngleTool,
   RectangleROITool,
@@ -16,6 +15,7 @@ import {
   CrosshairsTool,
 } from '@cornerstonejs/tools';
 import PinchZoomTool from './PinchZoomTool';
+import CineScrollTool from './CineScrollTool';   // StackScroll 자리에 등록 (이름은 그대로 'StackScroll')
 import SoftWindowLevelTool, { SoftWindowLevelPrimaryTool } from './SoftWindowLevelTool';
 import { ALL_SCRIBBLE_TOOLS, installScribbleArrowFix } from './ScribbleTool';
 
@@ -53,7 +53,7 @@ export function initCornerstone() {
       WindowLevelTool,
       PanTool,
       ZoomTool,
-      StackScrollTool,
+      CineScrollTool,
       LengthTool,
       AngleTool,
       RectangleROITool,
